@@ -49,7 +49,6 @@ function Item({ item, hideDomains, ranked }: ItemProps) {
     </span>
   ));
 
-  // Topics trail the title in small type, so they read as part of what the item is about.
   const tags = item.tags.slice(0, 3).map((slug) => {
     const topic = topics.find((t) => t.slug === slug);
     return (
@@ -62,6 +61,18 @@ function Item({ item, hideDomains, ranked }: ItemProps) {
       </Link>
     );
   });
+  // Topics close the line as one part, comma-separated so they read as a group apart from source and date.
+  if (tags.length > 0)
+    meta.push(
+      <span key="tags">
+        {tags.map((t, i) => (
+          <span key={i}>
+            {i > 0 && ", "}
+            {t}
+          </span>
+        ))}
+      </span>,
+    );
 
   return (
     <li className={`py-3 ${offTopic ? "opacity-60" : ""}`}>
@@ -86,28 +97,12 @@ function Item({ item, hideDomains, ranked }: ItemProps) {
         </div>
         {counts.length > 0 && <div className="flex shrink-0 gap-x-3">{counts}</div>}
       </div>
-      <div className="leading-snug">
-        <ExternalLink
-          href={item.url}
-          className="font-serif text-[17px] text-ink decoration-faint hover:underline sm:text-lg"
-        >
-          {item.title}
-        </ExternalLink>
-        {/* Plain inline text, so topics that wrap start flush left rather than indented. */}
-        {tags.length > 0 && (
-          <>
-            {" "}
-            <span className="text-xs text-faint">
-              {tags.map((t, i) => (
-                <span key={i}>
-                  {i > 0 && <span aria-hidden> · </span>}
-                  {t}
-                </span>
-              ))}
-            </span>
-          </>
-        )}
-      </div>
+      <ExternalLink
+        href={item.url}
+        className="font-serif text-[17px] leading-snug text-ink decoration-faint hover:underline sm:text-lg"
+      >
+        {item.title}
+      </ExternalLink>
       {item.takeaway && <p className="mt-0.5 text-[15px] leading-snug text-muted">{item.takeaway}</p>}
     </li>
   );
