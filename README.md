@@ -1,6 +1,6 @@
 # technology-frontier
 
-Frontier Radar: an overview of recent discoveries and releases across 15 technology domains, taken only from primary sources (journals, curated preprints, lab research posts, official release channels) listed in `content/sources.yaml`. Claude tags each item with topics from `content/topics.yaml` and scores it, and the site ranks items by that score plus how many sources reported them. Scope and design live in [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Frontier Radar: an overview of recent discoveries and releases across 15 technology domains, taken only from primary sources (journals, curated preprints, lab research posts, official release channels) listed in `content/sources.yaml`. Claude tags each item with topics from `content/topics.yaml`, and "Top" lists sort by the votes the sources themselves publish (Hugging Face upvotes and likes, Hacker News points, GitHub stars). Scope and design live in [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Local setup
 
@@ -18,10 +18,9 @@ npm run dev
 
 | Command | Does |
 |---|---|
-| `npm run job hourly` | What the hourly trigger runs: `ingest`, then `assess`, then `rank` |
+| `npm run job hourly` | What the hourly trigger runs: `ingest`, then `assess` |
 | `npm run job ingest` | Fetch sources whose `next_due_at` has passed. `-- --force` ignores it; `-- --source=a,b` limits to some ids |
-| `npm run job assess` | Tag and score unassessed items with Claude (needs `ANTHROPIC_API_KEY`, or `ASSESS_PROVIDER=claude-code`). `-- --limit=N`; `-- --dry-run` prints results and writes nothing (still billed); `-- --retag` also redoes items from an older prompt version |
-| `npm run job rank` | Recompute rank for the last 60 days |
+| `npm run job assess` | Tag unassessed items with Claude (needs `ANTHROPIC_API_KEY`, or `ASSESS_PROVIDER=claude-code`). `-- --limit=N`; `-- --dry-run` prints results and writes nothing (still billed); `-- --retag` also redoes items from an older prompt version |
 | `npm run job maintenance` | Sync `content/sources.yaml` into the DB and delete items of sources removed from it |
 | `npm run validate:content` | Validate all YAML in `content/` |
 | `npm test` | Unit and connector tests (recorded fixtures, no network) |
@@ -39,13 +38,13 @@ Add an entry to `content/sources.yaml` (the header comment lists the allowed val
 
 ## Local assessment
 
-Assessment can run on this Mac through the Claude Code CLI and its Claude subscription instead of the API: no API key, nothing billed, but it only runs while the Mac is awake. The cloud hourly job keeps ingesting and ranking; without `ANTHROPIC_API_KEY` it skips assessment. Keep the subscription login on this machine only, never in Vercel or CI.
+Assessment can run on this Mac through the Claude Code CLI and its Claude subscription instead of the API: no API key, nothing billed, but it only runs while the Mac is awake. The cloud hourly job keeps ingesting; without `ANTHROPIC_API_KEY` it skips assessment. Keep the subscription login on this machine only, never in Vercel or CI.
 
 Needs `claude` logged in (`claude auth status` shows `"authMethod": "claude.ai"`). Create `.env.cron` (git-ignored):
 
 ```
 DATABASE_URL=<Neon pooled connection string>
-# Optional: re-rank on the site after each run, which also refreshes its page cache.
+# Optional: refresh the site's page cache after each run.
 APP_URL=https://<your app>.vercel.app
 CRON_SECRET=<same as Vercel>
 # Optional: cap items per run.

@@ -2,38 +2,20 @@ import Link from "next/link";
 import { compact, dayLabel } from "@/lib/format";
 import type { FeedItem } from "@/lib/queries";
 import { registry, type Layer } from "@/lib/registry";
+import { MEASURES, measureTotals } from "@/lib/signals";
 import { ExternalLink, LAYER_LABEL } from "./ui";
 
-const SIGNAL_LABEL: Record<string, (n: number) => string> = {
-  hn_points: (n) => `▲ ${compact(n)}`,
-  hf_upvotes: (n) => `▲ ${compact(n)}`,
-  stars: (n) => `★ ${compact(n)}`,
-};
-
-/** `ranked` lists show each item's date and quality score, since neither follows from its position. */
+/** `ranked` lists show each item's date, since it doesn't follow from its position. */
 type ItemProps = { item: FeedItem; hideDomains?: boolean; ranked?: boolean };
 
 function Item({ item, hideDomains, ranked }: ItemProps) {
-  const { sources, domains, topics, config } = registry();
+  const { sources, domains, topics } = registry();
   const sourceName = (id: string) => sources.find((s) => s.id === id)?.name ?? id;
   const extra = item.mentions.filter((m) => m.sourceId !== item.firstSourceId);
-  const signals = item.mentions.flatMap((m) =>
-    Object.entries(m.signals)
-      .filter(([k]) => SIGNAL_LABEL[k])
-      .map(([k, v]) => SIGNAL_LABEL[k](v)),
-  );
+  // What lists hide by default; only visible (dimmed) after "Show all".
   const offTopic = item.relevant === false;
-  // What lists hide by default; only visible after "Show all".
-  const dimmed = offTopic || (item.quality != null && item.quality < config.feed.minQuality);
 
   const meta: React.ReactNode[] = [];
-  if (ranked && item.quality != null) {
-    meta.push(
-      <Link key="q" href="/framework#scores" className="tabular-nums text-ink" title={`Quality ${item.quality} of 100`}>
-        {item.quality}
-      </Link>,
-    );
-  }
   if (ranked) meta.push(<span key="date">{dayLabel(item.sortAt)}</span>);
   meta.push(
     <Link key="src" href={`/sources/${item.firstSourceId}`} className="hover:text-ink">
@@ -57,7 +39,17 @@ function Item({ item, hideDomains, ranked }: ItemProps) {
     }
   }
   if (offTopic) meta.push(<span key="off">off-topic</span>);
-  if (signals.length) meta.push(<span key="sig" className="text-ink">{signals.join(" ")}</span>);
+  for (const t of measureTotals(item.mentions)) {
+    meta.push(
+      <span
+        key={t.measure}
+        className="tabular-nums text-ink"
+        title={t.parts.map((p) => `${p.n.toLocaleString()} ${p.noun} on ${p.platform}`).join(", ")}
+      >
+        <span aria-label={MEASURES[t.measure].label}>{MEASURES[t.measure].symbol}</span> {compact(t.total)}
+      </span>,
+    );
+  }
 
   // Topics are chips rather than dot-separated text, so multi-word topics stay apart from each other and from the meta.
   const tags = item.tags.slice(0, 3).map((slug) => {
@@ -74,7 +66,7 @@ function Item({ item, hideDomains, ranked }: ItemProps) {
   });
 
   return (
-    <li className={`py-3 ${dimmed ? "opacity-60" : ""}`}>
+    <li className={`py-3 ${offTopic ? "opacity-60" : ""}`}>
       <ExternalLink
         href={item.url}
         className="font-serif text-[17px] leading-snug text-ink decoration-faint hover:underline sm:text-lg"
@@ -96,7 +88,7 @@ function Item({ item, hideDomains, ranked }: ItemProps) {
 }
 
 /**
- * Items newest first under day headings, or with `flat` in the order given (e.g. by rank),
+ * Items newest first under day headings, or with `flat` in the order given (e.g. by votes),
  * each showing its own date.
  */
 export function ItemList({ items, hideDomains, flat }: { items: FeedItem[]; hideDomains?: boolean; flat?: boolean }) {

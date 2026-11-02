@@ -1,7 +1,7 @@
 import { and, arrayOverlaps, count, desc, eq, gte, inArray, sql, type SQL } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { db, schema } from "@/lib/db";
-import { registry } from "@/lib/registry";
+import { measureSql } from "@/lib/signals";
 
 const REVALIDATE = 300;
 const { items, itemMentions, itemAssessments, sourceState } = schema;
@@ -13,13 +13,13 @@ export type FeedFilters = {
   source?: string;
   tag?: string;
   q?: string;
-  /** "top" sorts by rank within the last `days` (all time if unset). */
+  /** "top" sorts by votes (lib/signals) within the last `days` (all time if unset). */
   sort?: "newest" | "top";
   days?: number;
   page?: number;
   /** Rows per page; defaults to PAGE_SIZE. */
   limit?: number;
-  /** Include off-topic and low-scoring items (config feed.minQuality), which lists hide by default. */
+  /** Include off-topic items, which lists hide by default. */
   all?: boolean;
 };
 
@@ -35,8 +35,6 @@ export type FeedItem = {
   kind: string;
   firstSourceId: string;
   tags: string[];
-  quality: number | null;
-  rank: number | null;
   /** LLM-written; render as plain text only. */
   takeaway: string | null;
   relevant: boolean | null;
@@ -46,10 +44,17 @@ export type FeedItem = {
 
 export const PAGE_SIZE = 40;
 
-/** Not marked off-topic, and not assessed below feed.minQuality. Unassessed items stay visible. */
+/** Not marked off-topic. Unassessed items stay visible. */
 function visible(): SQL {
-  return sql`(${items.quality} is null or ${items.quality} >= ${registry().config.feed.minQuality})
-    and not exists (select 1 from ${itemAssessments} a where a.item_id = ${items.id} and a.relevant = false)`;
+  return sql`not exists (select 1 from ${itemAssessments} a where a.item_id = ${items.id} and a.relevant = false)`;
+}
+
+/** An item's votes: each source's latest count, summed. What "Top" sorts by. */
+function votes(itemId: SQL | typeof items.id): SQL<number> {
+  return sql<number>`(select coalesce(sum(v.n), 0) from (
+    select distinct on (m.source_id) ${measureSql("votes")} as n
+    from ${itemMentions} m where m.item_id = ${itemId}
+    order by m.source_id, m.seen_at desc) v)`;
 }
 
 function where(f: FeedFilters): SQL | undefined {
@@ -112,8 +117,6 @@ const feedColumns = {
   kind: items.kind,
   firstSourceId: items.firstSourceId,
   tags: items.tags,
-  quality: items.quality,
-  rank: items.rank,
   takeaway: itemAssessments.takeaway,
   relevant: itemAssessments.relevant,
   contribution: itemAssessments.contribution,
@@ -121,7 +124,7 @@ const feedColumns = {
 
 const withAssessment = sql`${itemAssessments.itemId} = ${items.id}`;
 const newestFirst = [desc(items.sortAt), desc(items.id)];
-const topFirst = [sql`${items.rank} desc nulls last`, ...newestFirst];
+const topFirst = [sql`${votes(items.id)} desc`, ...newestFirst];
 
 export const getFeed = unstable_cache(
   /** `hidden` counts the items these filters match that are left out because `all` is unset. */
@@ -240,7 +243,7 @@ export const getTotals = unstable_cache(
 export type BoardCell = { n: number; topTitle: string };
 
 /**
- * Items per domain × layer over the last `days`, with the top-ranked headline in each cell.
+ * Items per domain × layer over the last `days`, with the most-voted headline in each cell.
  * Counts only what lists show by default (see `visible`).
  */
 export const getLayerBoard = unstable_cache(
@@ -248,15 +251,14 @@ export const getLayerBoard = unstable_cache(
     const since = new Date(Date.now() - days * 86_400_000);
     const rows = await db().execute<{ domain: string; layer: string; n: number; top_title: string }>(sql`
       with recent as (
-        select unnest(i.domains) as domain, i.layer, i.title, i.sort_at, i.rank,
+        select unnest(i.domains) as domain, i.layer, i.title, i.sort_at, ${votes(sql`i.id`)} as votes,
                (select count(distinct m.source_id) from ${itemMentions} m where m.item_id = i.id) as srcs
         from ${items} i
         where i.sort_at >= ${since.toISOString()}
-          and (i.quality is null or i.quality >= ${registry().config.feed.minQuality})
           and not exists (select 1 from ${itemAssessments} a where a.item_id = i.id and a.relevant = false)
       )
       select domain, layer, count(*)::int as n,
-             (array_agg(title order by rank desc nulls last, srcs desc, sort_at desc))[1] as top_title
+             (array_agg(title order by votes desc, srcs desc, sort_at desc))[1] as top_title
       from recent
       group by domain, layer`);
     const out: Record<string, Record<string, BoardCell>> = {};
@@ -285,17 +287,16 @@ export const getTagCounts = unstable_cache(
   { revalidate: REVALIDATE, tags: ["items"] },
 );
 
-export type SourceQuality = { assessed: number; avgQuality: number | null; relevantShare: number | null };
+export type SourceRelevance = { assessed: number; relevantShare: number | null };
 
-/** Per first source over the last `days`: how much of what it brings in is worth reading. */
-export const getSourceQuality = unstable_cache(
-  async (days: number): Promise<Record<string, SourceQuality>> => {
+/** Per first source over the last `days`: how much of what it brings in is on topic. */
+export const getSourceRelevance = unstable_cache(
+  async (days: number): Promise<Record<string, SourceRelevance>> => {
     const since = new Date(Date.now() - days * 86_400_000);
     const rows = await db()
       .select({
         sourceId: items.firstSourceId,
         assessed: sql<number>`count(${itemAssessments.itemId})::int`,
-        avgQuality: sql<number | null>`round(avg(${itemAssessments.quality}))::int`,
         relevantShare: sql<number | null>`avg(case when ${itemAssessments.relevant} then 1.0 else 0.0 end)::float8`,
       })
       .from(items)
@@ -304,7 +305,7 @@ export const getSourceQuality = unstable_cache(
       .groupBy(items.firstSourceId);
     return Object.fromEntries(rows.map(({ sourceId, ...q }) => [sourceId, q]));
   },
-  ["source-quality"],
+  ["source-relevance"],
   { revalidate: REVALIDATE, tags: ["items"] },
 );
 

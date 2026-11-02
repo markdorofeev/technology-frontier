@@ -25,10 +25,10 @@ run() {
   local limit
   limit="$(sed -n 's/^ASSESS_LIMIT=//p' "$ENV_FILE" | tail -n 1)"
   ASSESS_PROVIDER=claude-code node --env-file="$ENV_FILE" --import tsx src/cli/job.ts assess ${limit:+--limit="$limit"}
-  # Optional: ask the deployed site to re-rank, which also refreshes its page cache.
+  # Optional: ask the deployed site to refresh its page cache.
   set -a; . "$ENV_FILE"; set +a
   if [ -n "${APP_URL:-}" ] && [ -n "${CRON_SECRET:-}" ]; then
-    curl -fsS -X POST --max-time 120 -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/jobs/rank" >/dev/null \
+    curl -fsS -X POST --max-time 120 -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/jobs/refresh" >/dev/null \
       && echo "refreshed $APP_URL" || echo "could not refresh $APP_URL" >&2
   fi
 }

@@ -1,6 +1,6 @@
 # Technology Frontier Radar — Requirements
 
-Status: draft v0.6 (2026-10-22). v0.6 widens release coverage: Hacker News as a selector, Hugging Face new models, more lab channels (§5.1, §11 #13). v0.5 replaces Phase 1's triage-then-extract funnel with one assessment pass over every item (tags, scores, rank). v0.4 changes the goal from spotting commercial opportunities to a high-quality overview of recent discoveries, and replaces the starter sources with primary sources only. v0.3 dropped the daily brief. The current build is Phase 0 (sources + website) plus Phase 1's assessment and ranking. Turns the "Technology Frontier Intelligence" research brief into something buildable. The decisions from v0.1's open questions are recorded in §11.
+Status: draft v0.7 (2026-11-02). v0.7 drops the per-item scores and rank: "Top" sorts by the votes sources publish (§7, §11 #14). v0.6 widens release coverage: Hacker News as a selector, Hugging Face new models, more lab channels (§5.1, §11 #13). v0.5 replaces Phase 1's triage-then-extract funnel with one assessment pass over every item (tags, scores, rank). v0.4 changes the goal from spotting commercial opportunities to a high-quality overview of recent discoveries, and replaces the starter sources with primary sources only. v0.3 dropped the daily brief. The current build is Phase 0 (sources + website) plus Phase 1's assessment. Turns the "Technology Frontier Intelligence" research brief into something buildable. The decisions from v0.1's open questions are recorded in §11.
 
 ---
 
@@ -51,9 +51,9 @@ The site collects new items from a fixed set of primary sources, sorts them by d
 | **Layer** | Where an item sits: `scientific` (newly possible), `engineering` (reproducible, open, practical to build on), `product` (released for people to use) |
 | **Source** | One feed or endpoint, e.g. "arXiv cs.RO" |
 | **Item** | One raw entry fetched from a source: paper, post, release, trial, repo |
-| **Assessment** | The LLM's one-pass reading of an item: relevance, domains, topic tags, contribution type, the §7 scores and a one-line takeaway (§6.2) |
+| **Assessment** | The LLM's one-pass reading of an item: relevance, domains, topic tags, contribution type and a one-line takeaway (§6.2) |
 | **Topic** | A tag from the fixed list in `content/topics.yaml`, grouped by domain |
-| **Development** | A top-ranked item enriched by the LLM with structured fields (§6.3) |
+| **Development** | A top item enriched by the LLM with structured fields (§6.3) |
 | **Trend** | A cluster of developments about the same capability, observed over time across several sources and layers |
 
 ## 4. Scope by phase
@@ -80,14 +80,14 @@ Each phase ships something usable on its own. Don't start a phase until the one 
 - Items are deduplicated by canonical URL (and by DOI/arXiv ID where one exists).
 - One failing source never blocks the others.
 
-### Phase 1 — Assessment, ranking, extraction
-- **Assessment (built):** every new item, in every tier, goes to Claude once, 20 items per request: title, source, first authors and the abstract (up to ~1500 characters) or excerpt. It returns, per item: relevant or not, 1–3 domains, 1–4 topics from `content/topics.yaml` (plus up to 2 proposed new topics, stored for the owner to review), contribution type, released artifacts, the five §7 scores, a takeaway of at most 25 words and a short rationale. The assessment's domains replace the source's on the item; the source's are kept.
-  - At ~30 items/day one pass over everything is cheap, so the earlier small-model triage step is dropped and extraction only uses the rank.
+### Phase 1 — Assessment, extraction
+- **Assessment (built):** every new item, in every tier, goes to Claude once, 20 items per request: title, source, first authors and the abstract (up to ~1500 characters) or excerpt. It returns, per item: relevant or not, 1–3 domains, 1–4 topics from `content/topics.yaml` (plus up to 2 proposed new topics, stored for the owner to review), contribution type, released artifacts and a takeaway of at most 25 words. The assessment's domains replace the source's on the item; the source's are kept.
+  - At ~30 items/day one pass over everything is cheap, so the earlier small-model triage step is dropped.
   - Until an API key is set up, assessment runs on the owner's Mac through Claude Code on the Claude subscription, hourly while the Mac is awake (ARCHITECTURE §8.5). Those calls cost nothing extra and don't count toward the cap.
-- **Ranking (built):** quality (§7) plus corroboration, Hugging Face upvotes and source priority, minus a penalty for off-topic items (§7). Recomputed hourly for the last 60 days, since signals keep changing.
-- **Extraction (not built yet):** the Development fields (§6.3) for the top ~15–25 ranked items per day.
+- **Top order (built):** the votes the sources publish, summed across sources (§7). Nothing is scored for ranking.
+- **Extraction (not built yet):** the Development fields (§6.3) for the top ~15–25 items per day.
 - **Budget enforcement (built):** a hard cap of **$20/month**, enforced in code. Spend is recorded per call from the API's token usage. A call goes ahead only if, at its worst-case cost, the month stays under the cap and today stays under 1.5 × (remaining budget ÷ days left in the month). Otherwise LLM steps stop until the allowance resets; items stay in the feed unassessed, and the sources page shows how many. The 80% alert email is not built yet.
-- Lists: Top this week / Top this month / Newest sorting, and a topic filter on domain pages. Off-topic items and items scoring below `feed.minQuality` are hidden unless the reader chooses "Show all" (decision #12).
+- Lists: Top this week / Top this month / Newest sorting, and a topic filter on domain pages. Off-topic items are hidden unless the reader chooses "Show all" (decision #12).
 - Thumbs up/down on each item, stored for tuning later. Owner only, so it waits for sign-in.
 
 **Acceptance:**
@@ -199,7 +199,7 @@ Other primary sources from the brief go into the registry with `enabled: false` 
 `id, source_id, url, canonical_url, external_id (DOI/arXiv/NCT), title, authors, published_at, fetched_at, summary/abstract, raw_payload, content_hash`
 
 ### 6.2 Assessment
-`item_id, relevant (bool), domains[], topics[], proposed_topics[], contribution, artifacts[], novelty, magnitude, evidence, breadth, maturity (1–5 each), quality (0–100), takeaway, rationale, model, prompt_version, llm_call_id`
+`item_id, relevant (bool), domains[], topics[], proposed_topics[], contribution, artifacts[], takeaway, model, prompt_version, llm_call_id`
 
 ### 6.3 Development (enriched)
 | Field | Notes |
@@ -224,7 +224,7 @@ Other primary sources from the brief go into the registry with `enabled: false` 
 
 ## 7. Scoring
 
-Each dimension is scored 1–5 by the LLM for every item (§4 Phase 1), with one short rationale for all five. Owner overrides come with sign-in.
+The rubric for trends (Phase 2). Each dimension is scored 1–5 by the LLM, with one short rationale for all five. Owner overrides come with sign-in. Single items are not scored (decision #14).
 
 | Dimension | Weight |
 |---|---|
@@ -236,7 +236,7 @@ Each dimension is scored 1–5 by the LLM for every item (§4 Phase 1), with one
 
 `quality = Σ (weight × (s − 1) / 4) × 100`, which maps all-1s to 0 and all-5s to 100. Commercial potential is deliberately not a dimension.
 
-**Rank** (what "Top" sorts by) = quality, or a neutral value before assessment, + a bonus per further source that reported the item (capped) + up to a fixed bonus from Hugging Face upvotes (log scale) + a source-priority adjustment − a penalty if the item isn't relevant. Weights and bonuses live in `content/config.yaml`, not code.
+**Item order.** Every count a source publishes (Hugging Face upvotes, likes, comments and downloads; Hacker News points and comments; GitHub stars) is one of three measures: votes, comments or downloads. Items show each measure summed over the sources that reported them. "Top" sorts by votes; items from sources without counts (journals, lab posts) follow, newest first.
 
 ## 8. Pages
 
@@ -258,7 +258,7 @@ Must work at phone width (the owner reads it on a phone). Owner-only controls (r
 - **Schedule** (all times Asia/Dubai, UTC+4):
   - Feed/API sources: hourly for `hourly`, otherwise once a day at 02:00.
   - Page monitors: once a day at 02:00.
-  - Assessment and ranking run hourly after ingestion (Phase 1). Extraction, once built, is submitted once a day. Vercel Hobby cron fires anywhere in the scheduled hour; see ARCHITECTURE §9.
+  - Assessment runs hourly after ingestion (Phase 1). Extraction, once built, is submitted once a day. Vercel Hobby cron fires anywhere in the scheduled hour; see ARCHITECTURE §9.
   - Weekly overview: Saturday 08:00. Monthly overview: 1st of the month at 08:00.
 - **Politeness:** respect robots.txt and rate limits. Identify with a User-Agent. Back off on errors.
 - **Traceability:** store the prompt version and model with every LLM output, so outputs can be re-run when prompts change.
@@ -296,6 +296,7 @@ Must work at phone width (the owner reads it on a phone). Owner-only controls (r
 | 11 | Free assessment for now | (2026-10-20) Run assessment locally through the Claude Code CLI on the owner's subscription, scheduled with launchd, writing to the production DB. Switch to the API by setting `ANTHROPIC_API_KEY` in Vercel |
 | 12 | Navigation and default views | (2026-10-20) Domain is the main way in: the home page is a per-domain digest of the week and each domain page is its own feed, so the busiest domain (AI, about half the volume) can't bury the rest. Lists default to Top, not Newest, and hide off-topic and low-scoring items behind "Show all". Source and source type are no longer feed filters; each source has its own page |
 | 13 | Wider release coverage | (2026-10-22) Releases are caught without listing every company: Hacker News stories with 500+ points act as a selector (only the linked primary page is kept), and Hugging Face models with 150+ likes catch open-weight releases from any lab. Closed-model labs (Google, Meta, xAI, Mistral) get their own release channels. Off-topic picks are left to the assessment to hide. Reverses #9 for Hacker News, Cloudflare and NVIDIA |
+| 14 | Top order from source counts | (2026-11-02) The per-item scores (novelty … maturity), the quality number and the rank formula are removed: "Top" sorts by the votes sources publish, and the three measures (votes, comments, downloads) are shown on every item. Lists no longer hide low-scoring items, only off-topic ones. The §7 rubric stays for trends |
 
 ## 12. Open questions
 

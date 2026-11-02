@@ -2,7 +2,6 @@ import { and, eq, gt } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { assessItems } from "@/lib/pipeline/assess";
 import { pruneItems, runIngest, syncSources } from "@/lib/pipeline/ingest";
-import { rankRecent } from "@/lib/pipeline/rank";
 
 /** Vercel Hobby functions stop at 300 s; nothing new starts after this. */
 const HOURLY_BUDGET_MS = 240_000;
@@ -12,22 +11,21 @@ const ASSESS_RESERVE_MS = 90_000;
 export type JobArgs = { sourceIds?: string[]; force?: boolean; limit?: number; retag?: boolean; dryRun?: boolean };
 
 export const JOBS = {
-  /** Hourly (GitHub Actions): fetch due sources, assess what's new, re-rank. */
+  /** Hourly (GitHub Actions): fetch due sources, then assess what's new. */
   hourly: async (args: JobArgs) => {
     const deadline = Date.now() + HOURLY_BUDGET_MS;
     const ingest = await runIngest({ ...args, budgetMs: HOURLY_BUDGET_MS - ASSESS_RESERVE_MS });
     const assess = await assessItems({ deadline: deadline - 60_000 });
-    const rank = await rankRecent();
-    return { ingest, assess, rank };
+    return { ingest, assess };
   },
   /** Fetch only (the daily Vercel safety net, and local runs). */
   ingest: async (args: JobArgs) => runIngest(args),
   /** Assess unassessed items; `retag` also redoes those from older prompt versions. */
-  assess: async (args: JobArgs) => {
-    const assess = await assessItems({ limit: args.limit, retag: args.retag, dryRun: args.dryRun });
-    return { assess, rank: args.dryRun ? undefined : await rankRecent() };
-  },
-  rank: async () => rankRecent(),
+  assess: async (args: JobArgs) => ({
+    assess: await assessItems({ limit: args.limit, retag: args.retag, dryRun: args.dryRun }),
+  }),
+  /** Does nothing; the jobs route refreshes the site's page cache after any job (used after a local assess). */
+  refresh: async () => ({}),
   /** Daily (Vercel Cron): registry sync, then drop items of removed sources. */
   maintenance: async () => ({ sources: await syncSources(), ...(await pruneItems()) }),
 } as const;

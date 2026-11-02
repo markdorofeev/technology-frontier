@@ -128,7 +128,7 @@ export function HiddenNote({ params, href, hidden }: { params: FeedParams; href:
   if (params.all) {
     return (
       <p className="mb-4 text-sm text-faint">
-        Showing off-topic and low-scoring items too.{" "}
+        Showing off-topic items too.{" "}
         <Link href={href({ all: undefined })} className="text-accent hover:underline">
           Hide them
         </Link>
@@ -138,7 +138,7 @@ export function HiddenNote({ params, href, hidden }: { params: FeedParams; href:
   if (!hidden) return null;
   return (
     <p className="mb-4 text-sm text-faint">
-      {hidden.toLocaleString()} off-topic or low-scoring {hidden === 1 ? "item" : "items"} hidden.{" "}
+      {hidden.toLocaleString()} off-topic {hidden === 1 ? "item" : "items"} hidden.{" "}
       <Link href={href({ all: true })} className="text-accent hover:underline">
         Show all
       </Link>

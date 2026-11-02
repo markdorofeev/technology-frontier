@@ -4,11 +4,10 @@ import { db, schema, type Database } from "@/lib/db";
 import { checkBudget, type BudgetCheck } from "@/lib/llm/budget";
 import { claudeCodeClient } from "@/lib/llm/claude-code";
 import { anthropicClient, costUsd, type LlmClient, type LlmRequest, type LlmResponse } from "@/lib/llm/client";
-import * as prompt from "@/lib/llm/prompts/assess.v1";
-import { registry, type ScoreWeights } from "@/lib/registry";
+import * as prompt from "@/lib/llm/prompts/assess.v2";
+import { registry } from "@/lib/registry";
 import { excerpt } from "@/lib/text";
 import { errorMessage, tierFor } from "./ingest";
-import { qualityScore } from "./rank";
 
 export const PROMPT_VERSION = prompt.version;
 const ABSTRACT_CHARS = 1500;
@@ -87,7 +86,7 @@ const tidy = (s: string) => s.trim().toLowerCase().slice(0, 40);
 export function toAssessment(
   r: prompt.AssessResult,
   item: Pick<Candidate, "id" | "sourceDomains">,
-  meta: { model: string; weights: ScoreWeights; llmCallId: number | null; now: Date },
+  meta: { model: string; llmCallId: number | null; now: Date },
 ): AssessmentRow {
   const { domains: knownDomains, topics: knownTopics } = registry();
   const domainSet = new Set(knownDomains.map((d) => d.slug));
@@ -107,14 +106,7 @@ export function toAssessment(
     proposedTopics: uniq(proposed.filter((t) => !topicSet.has(t))).slice(0, 2),
     contribution: r.contribution,
     artifacts: uniq(r.artifacts),
-    novelty: r.novelty,
-    magnitude: r.magnitude,
-    evidence: r.evidence,
-    breadth: r.breadth,
-    maturity: r.maturity,
-    quality: qualityScore(r, meta.weights),
     takeaway: r.takeaway.trim().slice(0, 300),
-    rationale: r.rationale.trim().slice(0, 400),
     llmCallId: meta.llmCallId,
   };
 }
@@ -152,7 +144,7 @@ export type AssessStats = {
   unknownIds: number;
   /** Batch items the model returned no result for; they are retried next run. */
   missing: number;
-  /** Results that didn't match the item schema (e.g. a score of 6); those items are retried next run. */
+  /** Results that didn't match the item schema (e.g. an unknown contribution); those items are retried next run. */
   invalid: number;
   /** Why the run stopped before going through every candidate. */
   stoppedBy?: string;
@@ -253,7 +245,7 @@ export async function processBatches(
     stats.invalid += interpreted.invalid;
     stats.missing += batch.length - interpreted.results.length;
     const rows = interpreted.results.map((r) =>
-      toAssessment(r, byId.get(r.id)!, { model: res.model, weights: config.scoreWeights, llmCallId: callId, now }),
+      toAssessment(r, byId.get(r.id)!, { model: res.model, llmCallId: callId, now }),
     );
     await deps.write(rows);
     stats.assessed += rows.length;
@@ -387,7 +379,7 @@ async function writeAssessments(database: Database, rows: AssessmentRow[]) {
         .onConflictDoUpdate({ target: schema.itemAssessments.itemId, set });
       await tx
         .update(schema.items)
-        .set({ domains: row.domains, tier: tierFor(row.domains), tags: row.topics, quality: row.quality })
+        .set({ domains: row.domains, tier: tierFor(row.domains), tags: row.topics })
         .where(sql`${schema.items.id} = ${itemId}`);
     }
   });

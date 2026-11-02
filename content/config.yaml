@@ -1,27 +1,4 @@
-# Tunables for scoring, ranking and the LLM step. Code reads these; changing them needs no code change.
-
-# REQUIREMENTS §7: quality = Σ weight × (score − 1) / 4 × 100. Weights must sum to 1.
-scoreWeights:
-  novelty: 0.25
-  magnitude: 0.25
-  evidence: 0.25
-  breadth: 0.15
-  maturity: 0.10
-
-# Rank = quality (or `unassessed` before the item is scored) plus these adjustments.
-rank:
-  unassessed: 40
-  perExtraSource: 8
-  maxSourceBonus: 16
-  # Up to this many points from HF upvotes, on a log scale that reaches the max at `upvotesForMax`.
-  maxUpvoteBonus: 10
-  upvotesForMax: 200
-  sourcePriority: { "1": 5, "2": 0, "3": -5 }
-  notRelevant: -40
-
-# Lists hide off-topic items and assessed items scoring below this, unless the reader asks for all.
-feed:
-  minQuality: 30
+# Tunables for the LLM step. Code reads these; changing them needs no code change.
 
 llm:
   # Hard monthly cap in USD (REQUIREMENTS §4 Phase 1).

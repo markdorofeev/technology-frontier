@@ -1,6 +1,6 @@
 # Technology Frontier Radar — Architecture
 
-Status: draft v0.3 (2026-10-20). v0.3 replaces triage with one assessment pass and adds ranking (§7). v0.2 drops the daily brief. This describes how [REQUIREMENTS.md](REQUIREMENTS.md) gets built. Section numbers like "R§4" point to the requirements doc.
+Status: draft v0.4 (2026-11-02). v0.4 drops the item scores and rank: "Top" sorts by the votes sources publish (§7.3). v0.3 replaces triage with one assessment pass and adds ranking (§7). v0.2 drops the daily brief. This describes how [REQUIREMENTS.md](REQUIREMENTS.md) gets built. Section numbers like "R§4" point to the requirements doc.
 
 ---
 
@@ -11,7 +11,7 @@ Status: draft v0.3 (2026-10-20). v0.3 replaces triage with one assessment pass a
 | Vercel Hobby cron: **at most once a day per job**, and it fires anywhere in the scheduled hour | Vercel docs (checked 2026-10-18) | Hourly ingestion can't run on Vercel Cron. A GitHub Actions schedule triggers it instead. Daily jobs are scheduled one hour before their deadline |
 | Vercel Hobby functions: **max 300 s** | Vercel docs | Every job is resumable and stops itself at a 240 s time budget |
 | Neon Free: **1 GB storage**, 100 CU-hours/month, scales to zero | Neon docs (checked 2026-10-18) | No full raw payloads are stored. Public pages are cached so visitors don't wake the DB |
-| **$20/month LLM cap** | R§4 Phase 1 | Source filters drop noise before storage; one assessment call per 20 items; extraction (later) only for top-ranked items. Every call is checked against the cap first (§8.2) |
+| **$20/month LLM cap** | R§4 Phase 1 | Source filters drop noise before storage; one assessment call per 20 items; extraction (later) only for top items. Every call is checked against the cap first (§8.2) |
 | **Public, read-only** site | R§2 | Pages are static/ISR. Owner controls hydrate client-side. Source text is shown as excerpts only. LLM output is treated as untrusted |
 | One developer, one user | R§2 | One Next.js app and one database. No queues, workers or microservices |
 
@@ -31,7 +31,7 @@ flowchart LR
   end
 
   subgraph Pipeline[src/lib/pipeline]
-    ING[ingest] --> ASSESS[assess] --> RANK[rank]
+    ING[ingest] --> ASSESS[assess]
     RANK --> SEL[select + extract]
   end
 
@@ -81,7 +81,7 @@ content/                      # human-edited, reviewed in git, validated in CI
   domains/*.yaml              # 15 domains: subfields, signals, research/products/people
   people.yaml                 # specialists + cross-disciplinary thinkers
   topics.yaml                 # topic tags per domain, the only tags assessment may use
-  config.yaml                 # score weights, rank bonuses, budget, model ids, prices
+  config.yaml                 # budget, model ids, prices
 src/
   app/                        # pages (§10), /api/jobs/[name], /api/me, /login
   lib/
@@ -89,7 +89,7 @@ src/
     connectors/               # one file per method: rss, arxiv, hf-papers, github-search,
                               #   biorxiv, ctgov, hf-models, page-monitor; index.ts = registry
     http/                     # fetch wrapper: UA, timeout, conditional GET, robots, retry
-    pipeline/                 # ingest, canonicalize, assess, rank, extract (later), ...
+    pipeline/                 # ingest, canonicalize, assess, extract (later), ...
     llm/                      # client, budget ledger, prompts/<name>.v<N>.ts, output schemas
     db/                       # drizzle schema, client, queries
     email/                    # templates + send
@@ -138,7 +138,7 @@ A connector is a pure function of (config, state, HTTP). It never writes to the 
 3. Run connectors with concurrency 4 until the **240 s budget** is used up. Sources left over stay due for the next run.
 4. Apply the source's `filter` (categories, title and URL patterns from the registry). Items that fail are dropped before storage. Then, for each item: **canonicalize**. Lowercase the host, force https, strip `utm_*`/`ref`/fragments, map arXiv `pdf/`→`abs/` and drop the version suffix, and use a DOI when present. Then **upsert** on `canonical_url`. If the item already exists, add an `item_mentions` row instead (the same paper arriving from HF Papers and a lab blog is one item with two mentions; mentions are a signal in their own right).
 5. Update `source_state`: cursor, ETag/Last-Modified, `last_success_at` or `last_error`, `consecutive_failures`, `next_due_at = now + frequency`. On failure, back off exponentially, capped at 24 h.
-6. The `hourly` job then assesses new items (§7.2) and re-ranks recent ones (§7.3).
+6. The `hourly` job then assesses new items (§7.2).
 
 Idempotent: re-running steps 2–6 can't duplicate items (unique keys). Each source is processed in its own transaction, so a timeout loses at most one source's work, and that source is retried on the next run.
 
@@ -173,7 +173,7 @@ items            id PK, canonical_url UNIQUE, external_id, external_kind,
                  domains text[],                    -- the assessment's once assessed
                  source_domains text[],             -- what the source said
                  layer, kind, tier,
-                 tags text[], quality smallint NULL, rank real NULL  -- copied from the assessment / §7.3
+                 tags text[]                        -- copied from the assessment
                  search tsvector GENERATED (title || excerpt || abstract)
                  UNIQUE(external_kind, external_id) WHERE external_id IS NOT NULL
 item_mentions    item_id→items, source_id→sources, seen_at, url, signals jsonb
@@ -181,8 +181,7 @@ item_mentions    item_id→items, source_id→sources, seen_at, url, signals jso
 
 item_assessments item_id PK→items, prompt_version, model, assessed_at, relevant bool,
                  domains text[], topics text[], proposed_topics text[], contribution,
-                 artifacts text[], novelty..maturity smallint, quality smallint,
-                 takeaway text, rationale text, llm_call_id→llm_calls
+                 artifacts text[], takeaway text, llm_call_id→llm_calls
 developments     item_id PK→items, technology, subfield, claim, previous_limitation,
                  new_capability, quantitative_improvement jsonb NULL,
                  evidence_type, claim_status, maturity, significance,
@@ -212,19 +211,18 @@ Source filters (R§5.2 `filter`) run at ingestion, so filtered items are never s
 
 ### 7.2 Assess (Claude Opus 5.5, synchronous, hourly) — `pipeline/assess.ts`
 - Runs in the `hourly` job after ingestion, until 60 s before the job's 240 s budget. Takes unassessed items newest first, 20 per request (`content/config.yaml`). `npm run job assess -- --retag` also redoes items assessed by an older prompt version; `--dry-run` calls the model, records the cost, prints the results and writes nothing.
-- Input: a JSON array of `{id, source, sourceKind, layer, title, authors≤3, published, text}`, where `text` is the abstract cut to 1500 characters, or the excerpt. The system prompt (domains, their topics, contribution types, score anchors) is the same in every call and is cached.
-- Output: structured output (`output_config.format`), one result per item: `relevant, domains[], topics[], proposed_topics[], contribution, artifacts[], novelty, magnitude, evidence, breadth, maturity, takeaway, rationale`.
+- Input: a JSON array of `{id, source, sourceKind, layer, title, authors≤3, published, text}`, where `text` is the abstract cut to 1500 characters, or the excerpt. The system prompt (domains, their topics, contribution types) is the same in every call and is cached.
+- Output: structured output (`output_config.format`), one result per item: `relevant, domains[], topics[], proposed_topics[], contribution, artifacts[], takeaway`.
 - The SDK turns zod enums and ranges into description hints, so the API does not enforce them. Each result is therefore checked on its own: a result that doesn't match the item schema, or whose id wasn't in the batch, is dropped and the item retried next run. Unknown topics become proposals, unknown domains are dropped (falling back to the source's), so one bad value never costs the batch.
-- Writes `item_assessments`, then copies `domains`, `tags`, `quality` and the re-derived `tier` onto `items`.
+- Writes `item_assessments`, then copies `domains`, `tags` and the re-derived `tier` onto `items`.
 - Effort `low`; thinking is adaptive (always on for Opus 5.5). Server-side refusal fallback is on (`fallbacks: "default"`).
 
-### 7.3 Rank (rules, hourly) — `pipeline/rank.ts`
-- `rank = quality (or 40 if unassessed) + 8 per further source (max +16) + up to +10 from HF upvotes (log scale, full at 200) + source priority (+5 / 0 / −5) − 40 if not relevant`. All numbers in `content/config.yaml`.
-- Recomputed every hour for items from the last 60 days (and any never ranked), because upvotes and mentions keep changing.
-- "Top" views sort by rank within a window (7 days, 30 days, all time) instead of decaying it over time.
+### 7.3 Measures and "Top" — `lib/signals.ts`
+- Connectors store each source's own counts in `item_mentions.signals`. `lib/signals.ts` maps every key to one of three measures: votes (`hf_upvotes`, `hf_likes`, `hn_points`, `stars`), comments (`hf_comments`, `hn_comments`) and downloads (`hf_downloads`). Items show each measure summed over their sources' latest mentions.
+- "Top" views sort by votes within a window (7 days, 30 days), computed at query time from the latest mention per source, so there is nothing to recompute. Items whose sources publish no counts follow, newest first.
 
 ### 7.4 Select + extract (not built yet; Claude Sonnet 5.5, Message Batches, daily)
-- **Select** (04:00 Dubai, no LLM): the top 25 items by rank from the last 36 h, with a cap per domain so AI can't take every slot.
+- **Select** (04:00 Dubai, no LLM): the top 25 items by votes from the last 36 h, with a cap per domain so AI can't take every slot.
 - **Extract:** one Message Batch (50% price) with one request per item: the item plus any mentions' titles → Development fields (R§6.3) as structured output.
 - The hourly job polls open batches and writes results, then `revalidateTag('items')`.
 
@@ -247,7 +245,7 @@ Prices from the current Claude model table: Haiku 5.5 $0.10/$0.50, Sonnet 5.5 $2
 | Monthly report (P3) | `claude-opus-5-5` | 1 call/month | 60k / 20k per call | ~$0.60 |
 | **Total** | | | | **~$16–18**, close to the cap |
 
-Assessment uses Opus because judging what is new is the point of the score, and at this volume it fits. With extraction added, the total gets close to the cap: if measured spend says so, move assessment to `claude-sonnet-5-5` (about half the cost) in `content/config.yaml`, no code change.
+Assessment uses Opus because the takeaway and domain calls need it, and at this volume it fits. With extraction added, the total gets close to the cap: if measured spend says so, move assessment to `claude-sonnet-5-5` (about half the cost) in `content/config.yaml`, no code change.
 
 ### 8.2 Budget guard (enforces R§4 Phase 1) — `llm/budget.ts`
 
@@ -283,7 +281,7 @@ Source text is written by third parties and the site is public, so:
 - `ASSESS_PROVIDER=claude-code` makes the assess step run each batch as `claude -p --model <id> --effort <level> --output-format json --json-schema <schema> --system-prompt <prompt> --tools "" --strict-mcp-config --no-session-persistence`, in an empty temp directory, with the items on stdin. API keys are removed from the child's environment so the subscription login is used.
 - The same safety posture as §8.4: no tools, no MCP servers, no project files, output constrained to the schema (the CLI validates it and retries on mismatch; draft-07, so zod's `$schema` marker is dropped). The per-item checks of §7.2 still run.
 - Calls are stored with `llm_calls.billing = 'subscription'` and `cost_usd = 0`, so they don't count toward the cap; the job stats report the CLI's API-equivalent cost.
-- Runs only on the owner's Mac: `scripts/assess-cron.sh` installs a launchd agent (`StartInterval` 3600 s, so a run missed during sleep happens on wake) that assesses the production database from `.env.cron` and then calls `/api/jobs/rank` to refresh the site's cache. The cloud `hourly` job skips assessment when it has no `ANTHROPIC_API_KEY`.
+- Runs only on the owner's Mac: `scripts/assess-cron.sh` installs a launchd agent (`StartInterval` 3600 s, so a run missed during sleep happens on wake) that assesses the production database from `.env.cron` and then calls `/api/jobs/refresh` to refresh the site's cache. The cloud `hourly` job skips assessment when it has no `ANTHROPIC_API_KEY`.
 - Trade-offs: assessment stalls while the Mac sleeps, and usage counts toward the subscription's limits, shared with interactive use. Switching to the API is `ANTHROPIC_API_KEY` in Vercel plus `npm run cron:uninstall`.
 
 ## 9. Scheduling
@@ -292,8 +290,8 @@ All times are Asia/Dubai (UTC+4). Vercel Hobby fires anywhere within the hour, s
 
 | Job | Trigger | UTC cron | Fires (Dubai) | Does |
 |---|---|---|---|---|
-| `hourly` | GitHub Actions | `15 * * * *` | every hour | ingest due sources → assess (only with `ANTHROPIC_API_KEY`) → rank |
-| `assess` (subscription mode) | launchd on the owner's Mac | every 60 min | while awake | assess → rank via `/api/jobs/rank` (§8.5) |
+| `hourly` | GitHub Actions | `15 * * * *` | every hour | ingest due sources → assess (only with `ANTHROPIC_API_KEY`) |
+| `assess` (subscription mode) | launchd on the owner's Mac | every 60 min | while awake | assess, then refresh the cache via `/api/jobs/refresh` (§8.5) |
 | `extract` (P1) | Vercel Cron | `0 0 * * *` | 04:00–04:59 | select top 25 → submit extraction batch |
 | `hourly` (safety net) | Vercel Cron | `30 1 * * *` | 05:30–06:29 | the same job, in case GitHub Actions is down |
 | `weekly` (P2) | Vercel Cron | `0 4 * * 6` | Sat 08:00–08:59 | weekly overview |
@@ -349,7 +347,7 @@ Owner mutations are **server actions** that call `requireOwner()` first.
 - Structured `console` logs (JSON lines) end up in Vercel logs. That's enough for one user, so no APM.
 
 ## 13. Testing and CI
-- **Unit:** canonicalization (an arXiv/DOI/UTM table), source filters, quality and rank formulas, budget decisions, assessment response handling (stop reasons, unknown ids, invalid items, unknown topics) and the batch loop with a fake LLM client.
+- **Unit:** canonicalization (an arXiv/DOI/UTM table), source filters, signal measures, budget decisions, assessment response handling (stop reasons, unknown ids, invalid items, unknown topics) and the batch loop with a fake LLM client.
 - **Connector fixtures:** recorded responses under `tests/fixtures/<source-id>/`, run through the connector, results snapshotted. A script refreshes them: `npm run fixtures:record <id>`.
 - **LLM steps:** prompt builders are snapshot-tested. Response handling is tested with recorded JSON. CI never makes live LLM calls.
 - **Registry validation:** CI loads every YAML file through zod and fails on unknown domains, duplicate IDs, or connector config that doesn't validate.

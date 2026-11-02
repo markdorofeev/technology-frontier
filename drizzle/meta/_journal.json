@@ -22,6 +22,13 @@
       "when": 1792475449724,
       "tag": "0002_llm_billing",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793616525967,
+      "tag": "0003_drop_scores",
+      "breakpoints": true
     }
   ]
 }

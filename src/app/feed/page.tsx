@@ -42,7 +42,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
     <>
       <PageHeader title="All items">
         {!params.domain && "Every domain in one list. "}
-        {total.toLocaleString()} items, {params.sort === "newest" ? "newest first" : "highest ranked first"}.
+        {total.toLocaleString()} items, {params.sort === "newest" ? "newest first" : "most voted first"}.
         An item reported by several sources appears once, marked +N.
       </PageHeader>
 

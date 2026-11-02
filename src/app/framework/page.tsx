@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { LAYER_LABEL, LAYER_QUESTION, PageHeader, Rows, Section } from "@/components/ui";
-import { LAYERS, registry, type Layer, type ScoreWeights } from "@/lib/registry";
+import { LAYERS, type Layer } from "@/lib/registry";
+import { MEASURES, SIGNALS, type Measure } from "@/lib/signals";
 
 export const metadata: Metadata = { title: "Framework" };
 
@@ -19,16 +20,7 @@ const EVIDENCE = [
   { stage: "Release", shows: "It works well enough for people outside the lab to use." },
 ];
 
-const SCORING: { dim: string; key: keyof ScoreWeights; q: string }[] = [
-  { dim: "Novelty", key: "novelty", q: "Is this genuinely new, or an incremental step on known work?" },
-  { dim: "Magnitude", key: "magnitude", q: "How large is the improvement over the previous best?" },
-  { dim: "Evidence", key: "evidence", q: "How reproducible and independently verified is it?" },
-  { dim: "Breadth", key: "breadth", q: "How many fields or problems does it affect?" },
-  { dim: "Maturity", key: "maturity", q: "How close is it to working outside the lab?" },
-];
-
 export default function FrameworkPage() {
-  const { scoreWeights, rank, feed } = registry().config;
   return (
     <>
       <PageHeader title="How to read the frontier">
@@ -89,37 +81,35 @@ export default function FrameworkPage() {
         </p>
       </Section>
 
-      <Section title="Scores and ranking" id="scores">
+      <Section title="How “Top” is sorted" id="top">
         <Rows>
-          {SCORING.map((s) => (
-            <div key={s.dim} className="grid grid-cols-[1fr_3rem] gap-3 py-2.5">
-              <div>
-                <div>{s.dim}</div>
-                <div className="text-sm text-muted">{s.q}</div>
-              </div>
-              <span className="text-right tabular-nums text-faint">{Math.round(scoreWeights[s.key] * 100)}%</span>
+          {(Object.keys(MEASURES) as Measure[]).map((m) => (
+            <div key={m} className="grid grid-cols-[1.5rem_7rem_1fr] gap-x-3 py-2.5 max-sm:grid-cols-[1.5rem_1fr]">
+              <span className="text-faint">{MEASURES[m].symbol}</span>
+              <span className="capitalize">{MEASURES[m].label}</span>
+              <span className="text-muted max-sm:col-start-2">
+                {Object.values(SIGNALS)
+                  .filter((s) => s.measure === m)
+                  .map((s) => `${s.platform} ${s.noun}`)
+                  .join(", ")}
+              </span>
             </div>
           ))}
         </Rows>
         <div className="mt-3 space-y-3 text-muted">
           <p>
-            Claude reads each new item once (title plus abstract or excerpt) and scores each dimension 1–5. The
-            weighted sum gives the quality score out of 100 shown next to each item in &ldquo;Top&rdquo; lists. With only a title to go on, scores
-            stay near the middle. The weights are a starting hypothesis, not a validated model.
+            Items show the counts their sources publish, grouped into these three measures. When several sources
+            report an item, their counts are added up; hover a count to see where it comes from.
           </p>
           <p>
-            &ldquo;Top&rdquo; lists sort by rank: quality, plus {rank.perExtraSource} for each further source that
-            reported the item (up to {rank.maxSourceBonus}), up to {rank.maxUpvoteBonus} for Hugging Face upvotes, and
-            a small bonus or penalty for the source&apos;s priority. Items that are company news or otherwise off-topic
-            lose {Math.abs(rank.notRelevant)}. Items not yet assessed rank at {rank.unassessed}.
+            &ldquo;Top&rdquo; lists sort by votes. Journals and lab posts publish no counts, so their items come after
+            the voted ones, newest first.
           </p>
           <p>
-            Lists hide off-topic items and items scoring below {feed.minQuality} unless you choose &ldquo;Show
-            all&rdquo;; hidden items are shown dimmed.
-          </p>
-          <p>
-            The same pass tags each item with topics from a fixed list and can move it to the domains its content is
-            about, so a quantum paper from an AI lab is filed under quantum.
+            Claude reads each new item once (title plus abstract or excerpt), writes the one-line takeaway, tags it
+            with topics from a fixed list and can move it to the domains its content is about, so a quantum paper from
+            an AI lab is filed under quantum. Lists hide items it flags as off-topic (company news, events, hiring)
+            unless you choose &ldquo;Show all&rdquo;; hidden items are shown dimmed.
           </p>
         </div>
       </Section>

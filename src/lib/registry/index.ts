@@ -53,8 +53,6 @@ export function loadRegistry(): Registry {
   for (const d of slugs) {
     if (!topics.some((t) => t.domain === d)) problems.push(`topics.yaml: domain "${d}" has no topics`);
   }
-  const weightSum = Object.values(config.scoreWeights).reduce((a, b) => a + b, 0);
-  if (Math.abs(weightSum - 1) > 1e-6) problems.push(`config.yaml: scoreWeights sum to ${weightSum}, not 1`);
   if (!config.llm.prices[config.llm.assess.model]) {
     problems.push(`config.yaml: no price for assess model "${config.llm.assess.model}"`);
   }

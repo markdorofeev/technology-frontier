@@ -11,9 +11,7 @@ import {
   numeric,
   pgTable,
   primaryKey,
-  real,
   serial,
-  smallint,
   text,
   timestamp,
   uniqueIndex,
@@ -85,10 +83,6 @@ export const items = pgTable(
     status: text("status").notNull().default("new"),
     /** Topic slugs from content/topics.yaml, copied from item_assessments. */
     tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
-    /** 0–100 from the R§7 scores; null until assessed. */
-    quality: smallint("quality"),
-    /** Quality plus corroboration and source signals (pipeline/rank.ts); what "Top" sorts by. */
-    rank: real("rank"),
     search: tsvector("search").generatedAlwaysAs(
       (): SQL =>
         sql`to_tsvector('english', coalesce(${items.title}, '') || ' ' || coalesce(${items.excerpt}, '') || ' ' || coalesce(${items.abstract}, ''))`,
@@ -104,7 +98,6 @@ export const items = pgTable(
     index("items_search_idx").using("gin", t.search),
     index("items_first_source_idx").on(t.firstSourceId, t.sortAt.desc()),
     index("items_tags_idx").using("gin", t.tags),
-    index("items_rank_idx").on(t.rank.desc()),
   ],
 );
 
@@ -147,14 +140,7 @@ export const itemAssessments = pgTable(
     proposedTopics: text("proposed_topics").array().notNull(),
     contribution: text("contribution").notNull(),
     artifacts: text("artifacts").array().notNull(),
-    novelty: smallint("novelty").notNull(),
-    magnitude: smallint("magnitude").notNull(),
-    evidence: smallint("evidence").notNull(),
-    breadth: smallint("breadth").notNull(),
-    maturity: smallint("maturity").notNull(),
-    quality: smallint("quality").notNull(),
     takeaway: text("takeaway").notNull(),
-    rationale: text("rationale").notNull(),
     llmCallId: integer("llm_call_id").references(() => llmCalls.id),
   },
   (t) => [index("item_assessments_version_idx").on(t.promptVersion)],

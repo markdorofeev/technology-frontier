@@ -3,6 +3,7 @@ import { isAllowedByRobots } from "@/lib/http";
 import { arxivIdFromUrl, canonicalizeUrl } from "@/lib/pipeline/canonicalize";
 import { passesFilter } from "@/lib/pipeline/ingest";
 import { loadRegistry } from "@/lib/registry";
+import { measureTotals } from "@/lib/signals";
 import { excerpt, stripHtml } from "@/lib/text";
 
 describe("canonicalizeUrl", () => {
@@ -95,5 +96,26 @@ describe("driverUrl", () => {
     const out = new URL(driverUrl("postgres://u:p@ep-x-pooler.neon.tech/db?sslmode=require&channel_binding=require"));
     expect(out.searchParams.get("sslmode")).toBe("require");
     expect(out.searchParams.has("channel_binding")).toBe(false);
+  });
+});
+
+describe("measureTotals", () => {
+  it("sums each measure across sources, in a fixed order, ignoring unknown keys", () => {
+    const totals = measureTotals([
+      { signals: { hn_comments: 30, hn_points: 500 } },
+      { signals: { hf_upvotes: 106, hf_comments: 2, forks: 9 } },
+    ]);
+    expect(totals.map((t) => [t.measure, t.total])).toEqual([
+      ["votes", 606],
+      ["comments", 32],
+    ]);
+    expect(totals[0].parts).toEqual([
+      { n: 500, noun: "points", platform: "Hacker News" },
+      { n: 106, noun: "upvotes", platform: "Hugging Face" },
+    ]);
+  });
+
+  it("returns nothing for sources without counts", () => {
+    expect(measureTotals([{ signals: {} }])).toEqual([]);
   });
 });

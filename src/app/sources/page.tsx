@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ExternalLink, PageHeader, Rows, Section } from "@/components/ui";
 import { hostOf, timeAgo } from "@/lib/format";
 import { SourceStatus } from "@/components/source-status";
-import { getAssessStatus, getSourceHealth, getSourceQuality } from "@/lib/queries";
+import { getAssessStatus, getSourceHealth, getSourceRelevance } from "@/lib/queries";
 import { registry } from "@/lib/registry";
 
 export const dynamic = "force-dynamic";
@@ -21,13 +21,13 @@ const METHOD_LABEL: Record<string, string> = {
   manual: "Manual",
 };
 
-const QUALITY_DAYS = 30;
+const RELEVANCE_DAYS = 30;
 
 export default async function SourcesPage() {
   const { sources, domains, reference } = registry();
-  const [health, quality, assess] = await Promise.all([
+  const [health, relevance, assess] = await Promise.all([
     getSourceHealth(),
-    getSourceQuality(QUALITY_DAYS),
+    getSourceRelevance(RELEVANCE_DAYS),
     getAssessStatus(),
   ]);
   const domainName = (slug: string) => domains.find((d) => d.slug === slug)?.short ?? slug;
@@ -61,7 +61,7 @@ export default async function SourcesPage() {
         <Rows>
           {automatic.map((s) => {
             const h = health[s.id];
-            const q = quality[s.id];
+            const q = relevance[s.id];
             return (
               <div key={s.id} className="py-3">
                 <div className="flex items-baseline justify-between gap-4">
@@ -79,9 +79,9 @@ export default async function SourcesPage() {
                   {s.domains.map(domainName).join(", ")} · {s.layer} · {METHOD_LABEL[s.method]}, {s.frequency} · last
                   success {timeAgo(h?.lastSuccessAt)}
                   {q && (
-                    <span title={`${q.assessed} items assessed, last ${QUALITY_DAYS} days`}>
+                    <span title={`${q.assessed} items assessed, last ${RELEVANCE_DAYS} days`}>
                       {" "}
-                      · quality {q.avgQuality ?? "–"} · {Math.round((q.relevantShare ?? 0) * 100)}% on topic
+                      · {Math.round((q.relevantShare ?? 0) * 100)}% on topic
                     </span>
                   )}
                 </p>
@@ -93,11 +93,8 @@ export default async function SourcesPage() {
 
       <Section title="Assessment">
         <p className="text-muted">
-          Each new item is read once by Claude, which picks its domains and topics and scores it (
-          <Link href="/framework#scores" className="text-accent hover:underline">
-            how
-          </Link>
-          ). Quality and on-topic share above cover the last {QUALITY_DAYS} days.{" "}
+          Each new item is read once by Claude, which picks its domains and topics, writes a one-line takeaway and
+          flags off-topic items. The on-topic share above covers the last {RELEVANCE_DAYS} days.{" "}
           {assess.unassessed > 0
             ? `${assess.unassessed} items are waiting to be assessed.`
             : "Every item has been assessed."}

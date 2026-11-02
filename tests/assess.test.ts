@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { budgetDecision } from "@/lib/llm/budget";
 import { parseResult } from "@/lib/llm/claude-code";
 import { costUsd, type LlmClient, type LlmResponse } from "@/lib/llm/client";
-import * as prompt from "@/lib/llm/prompts/assess.v1";
+import * as prompt from "@/lib/llm/prompts/assess.v2";
 import {
   interpretResponse,
   processBatches,
@@ -12,7 +12,6 @@ import {
   type Candidate,
   type CallRecord,
 } from "@/lib/pipeline/assess";
-import { qualityScore, rankScore } from "@/lib/pipeline/rank";
 import { loadRegistry } from "@/lib/registry";
 
 const reg = loadRegistry();
@@ -39,13 +38,7 @@ const result = (id: number, overrides: Partial<prompt.AssessResult> = {}): promp
   proposed_topics: [],
   contribution: "method",
   artifacts: ["code"],
-  novelty: 4,
-  magnitude: 3,
-  evidence: 3,
-  breadth: 3,
-  maturity: 2,
   takeaway: "Agents finish 2× more long tasks.",
-  rationale: "Clear gain on public benchmarks; preprint only.",
   ...overrides,
 });
 
@@ -101,14 +94,14 @@ describe("interpretResponse", () => {
   });
 
   it("drops only the items that don't match the schema", () => {
-    const r = interpretResponse(response([result(1, { novelty: 6 }), { id: 2 }, result(2)]), ids);
+    const r = interpretResponse(response([result(1, { contribution: "rumour" as prompt.Contribution }), { id: 2 }, result(2)]), ids);
     expect(r.ok && r.results.map((x) => x.id)).toEqual([2]);
     expect(r.ok && r.invalid).toBe(2);
   });
 });
 
 describe("toAssessment", () => {
-  const meta = { model: "m", weights: reg.config.scoreWeights, llmCallId: 3, now: new Date() };
+  const meta = { model: "m", llmCallId: 3, now: new Date() };
 
   it("falls back to the source's domains and tidies lists", () => {
     const row = toAssessment(
@@ -119,7 +112,6 @@ describe("toAssessment", () => {
     expect(row.domains).toEqual(["robotics"]);
     expect(row.topics).toEqual(["agents", "reasoning"]);
     expect(row.proposedTopics).toEqual(["tool use", "x"]);
-    expect(row.quality).toBe(qualityScore(result(1), reg.config.scoreWeights));
   });
 
   it("turns unknown topics into proposals and drops unknown domains", () => {
@@ -131,31 +123,6 @@ describe("toAssessment", () => {
     expect(row.domains).toEqual(["quantum"]);
     expect(row.topics).toEqual(["agents"]);
     expect(row.proposedTopics).toEqual(["made up"]);
-  });
-});
-
-describe("scores", () => {
-  const w = reg.config.scoreWeights;
-  const all = (n: number) => ({ novelty: n, magnitude: n, evidence: n, breadth: n, maturity: n });
-
-  it("maps all-1s to 0 and all-5s to 100", () => {
-    expect(qualityScore(all(1), w)).toBe(0);
-    expect(qualityScore(all(5), w)).toBe(100);
-    expect(qualityScore(all(3), w)).toBe(50);
-    expect(qualityScore({ ...all(1), novelty: 5 }, w)).toBe(25);
-  });
-
-  it("ranks with corroboration, upvotes, priority and relevance", () => {
-    const cfg = reg.config.rank;
-    const base = { quality: 50, relevant: true, sources: 1, hfUpvotes: 0, priority: 2 };
-    expect(rankScore(base, cfg)).toBe(50);
-    expect(rankScore({ ...base, quality: null, relevant: null }, cfg)).toBe(cfg.unassessed);
-    expect(rankScore({ ...base, sources: 2 }, cfg)).toBe(50 + cfg.perExtraSource);
-    expect(rankScore({ ...base, sources: 9 }, cfg)).toBe(50 + cfg.maxSourceBonus);
-    expect(rankScore({ ...base, hfUpvotes: cfg.upvotesForMax }, cfg)).toBe(50 + cfg.maxUpvoteBonus);
-    expect(rankScore({ ...base, hfUpvotes: 10_000 }, cfg)).toBe(50 + cfg.maxUpvoteBonus);
-    expect(rankScore({ ...base, priority: 1 }, cfg)).toBe(55);
-    expect(rankScore({ ...base, relevant: false }, cfg)).toBe(50 + cfg.notRelevant);
   });
 });
 

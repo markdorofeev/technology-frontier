@@ -44,7 +44,7 @@ export default async function Home() {
   return (
     <>
       <PageHeader title="This week on the frontier" kicker={`${shortDate(new Date(now.getTime() - DAYS * 86_400_000))} – ${shortDate(now)}`}>
-        The highest-ranked results, engineering work and releases in each domain from the last {DAYS} days. Every item
+        The most-voted results, engineering work and releases in each domain from the last {DAYS} days. Every item
         comes from a paper, a lab, or an official release channel. <MoreLink href="/framework">How to read this</MoreLink>
       </PageHeader>
 

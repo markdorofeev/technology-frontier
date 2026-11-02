@@ -5,7 +5,7 @@
  *   npm run job ingest -- --source=hf-daily-papers,lwn --force
  *   npm run job assess -- --limit=40 --dry-run
  *   npm run job assess -- --retag       # also redo items from older prompt versions
- *   npm run job hourly | rank | maintenance
+ *   npm run job hourly | maintenance
  */
 import { parseArgs } from "node:util";
 import { closeDb } from "@/lib/db";
@@ -27,7 +27,7 @@ const { positionals, values } = parseArgs({
 const name = positionals[0];
 if (!name || !isJobName(name)) {
   console.error(
-    "usage: npm run job <hourly|ingest|assess|rank|maintenance> [-- --force] [--source=a,b] [--limit=N] [--retag] [--dry-run]",
+    "usage: npm run job <hourly|ingest|assess|refresh|maintenance> [-- --force] [--source=a,b] [--limit=N] [--retag] [--dry-run]",
   );
   process.exit(1);
 }
@@ -43,11 +43,10 @@ function printIngest(stats: IngestResult) {
 
 function printAssess(stats: Awaited<ReturnType<typeof assessItems>>) {
   for (const r of stats.rows ?? []) {
-    const scores = [r.novelty, r.magnitude, r.evidence, r.breadth, r.maturity].join("");
     console.log(
-      `${String(r.quality).padStart(3)} ${scores} ${r.relevant ? " " : "✗"} ${r.contribution.padEnd(20)} ` +
+      `${r.relevant ? " " : "✗"} ${r.contribution.padEnd(20)} ` +
         `${r.domains.join(",")} [${r.topics.join(", ")}]${r.proposedTopics.length ? ` +(${r.proposedTopics.join(", ")})` : ""}\n` +
-        `    #${r.itemId} ${r.takeaway}\n    ${r.rationale}`,
+        `    #${r.itemId} ${r.takeaway}`,
     );
   }
   console.log(
@@ -78,7 +77,6 @@ try {
     else if (name === "hourly" || name === "assess") {
       if (stats.ingest) printIngest(stats.ingest as IngestResult);
       printAssess(stats.assess as Awaited<ReturnType<typeof assessItems>>);
-      if (stats.rank) console.log(`ranked ${(stats.rank as { ranked: number }).ranked} items`);
     } else console.log(JSON.stringify(stats, null, 2));
   }
 } finally {
