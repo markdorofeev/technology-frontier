@@ -34,9 +34,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         </header>
         <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">{children}</main>
         <footer className="mx-auto flex max-w-3xl flex-wrap gap-x-5 gap-y-2 border-t border-line px-4 py-6 text-sm text-faint sm:gap-6 sm:px-6">
-          <Link href="/framework" className="hover:text-ink">
-            Framework
-          </Link>
           <Link href="/people" className="hover:text-ink">
             People
           </Link>

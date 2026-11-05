@@ -8,12 +8,6 @@ export const LAYER_LABEL: Record<Layer, string> = {
   product: "Product",
 };
 
-export const LAYER_QUESTION: Record<Layer, string> = {
-  scientific: "What has become possible for the first time?",
-  engineering: "What has become reproducible, open, and practical to build on?",
-  product: "What has been released for people to use?",
-};
-
 export const TIER_LABEL: Record<Tier, string> = {
   deep: "Deep coverage, reviewed daily",
   regular: "Regular coverage, reviewed weekly",
