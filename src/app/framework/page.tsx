@@ -80,22 +80,6 @@ export default function FrameworkPage() {
             </div>
           ))}
         </Rows>
-        <div className="mt-3 space-y-3 text-muted">
-          <p>
-            Items show the counts their sources publish, grouped into these three measures. When several sources
-            report an item, their counts are added up; hover a count to see where it comes from.
-          </p>
-          <p>
-            &ldquo;Top&rdquo; lists sort by votes. Journals and lab posts publish no counts, so their items come after
-            the voted ones, newest first.
-          </p>
-          <p>
-            Claude reads each new item once (title plus abstract or excerpt), writes the one-line takeaway, tags it
-            with topics from a fixed list and can move it to the domains its content is about, so a quantum paper from
-            an AI lab is filed under quantum. Lists hide items it flags as off-topic (company news, events, hiring)
-            unless you choose &ldquo;Show all&rdquo;; hidden items are shown dimmed.
-          </p>
-        </div>
       </Section>
 
       <Section title="Finding what nobody is discussing yet">
