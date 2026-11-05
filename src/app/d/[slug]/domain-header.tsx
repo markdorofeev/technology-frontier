@@ -21,7 +21,7 @@ export function DomainHeader({ domain, tab }: { domain: Domain; tab: "feed" | "a
           </>
         }
       >
-        {domain.summary}
+        {tab === "about" && domain.summary}
       </PageHeader>
       <nav className="-mt-4 mb-6 flex gap-5 border-b border-line text-sm" aria-label={`${domain.short} sections`}>
         {tabs.map((t) => (

@@ -23,11 +23,7 @@ const EVIDENCE = [
 export default function FrameworkPage() {
   return (
     <>
-      <PageHeader title="How to read the frontier">
-        The goal is a high-quality overview of recent discoveries and developments: what became possible, how strong
-        the evidence is, and how it builds on earlier work. Items come only from papers, labs and official release
-        channels, never from general news or business coverage.
-      </PageHeader>
+      <PageHeader title="How to read the frontier" />
 
       <Section title="Three layers">
         <Rows>
@@ -39,10 +35,6 @@ export default function FrameworkPage() {
             </div>
           ))}
         </Rows>
-        <p className="mt-3 text-muted">
-          Every item is tagged with the layer of the source that reported it. A busy scientific column with a quiet
-          product column usually means results that haven&apos;t been built on yet.
-        </p>
       </Section>
 
       <Section title="Who could have noticed modern AI?">
@@ -57,10 +49,6 @@ export default function FrameworkPage() {
             </div>
           ))}
         </Rows>
-        <p className="mt-3 text-muted">
-          The significant results were public years before they were obvious. Seeing them early means reading primary
-          sources, not waiting for the coverage.
-        </p>
       </Section>
 
       <Section title="From result to release">
@@ -75,10 +63,6 @@ export default function FrameworkPage() {
             </div>
           ))}
         </Rows>
-        <p className="mt-3 text-muted">
-          No single source covers all four stages. When an item is reported by several sources, it&apos;s merged, so
-          a paper that also turns up in Hugging Face Daily Papers shows up as one item with several sources.
-        </p>
       </Section>
 
       <Section title="How “Top” is sorted" id="top">

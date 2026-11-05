@@ -37,11 +37,7 @@ export default async function SourcesPage() {
 
   return (
     <>
-      <PageHeader title="Sources">
-        Only primary sources: peer-reviewed journals, curated preprints, lab research posts and official release
-        channels. Business news, commentary and general tech news are left out, and each source can drop items by
-        feed category or title.
-      </PageHeader>
+      <PageHeader title="Sources" />
 
       {failing.length > 0 && (
         <p className="mb-8 border-l-2 border-bad pl-4">
@@ -93,8 +89,6 @@ export default async function SourcesPage() {
 
       <Section title="Assessment">
         <p className="text-muted">
-          Each new item is read once by Claude, which picks its domains and topics, writes a one-line takeaway and
-          flags off-topic items. The on-topic share above covers the last {RELEVANCE_DAYS} days.{" "}
           {assess.unassessed > 0
             ? `${assess.unassessed} items are waiting to be assessed.`
             : "Every item has been assessed."}

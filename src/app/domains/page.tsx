@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LayerBoard } from "@/components/layer-board";
-import { MoreLink, PageHeader, Rows, Section } from "@/components/ui";
+import { PageHeader, Rows, Section } from "@/components/ui";
 import { getLayerBoard } from "@/lib/queries";
 import { registry } from "@/lib/registry";
 
@@ -17,15 +17,11 @@ export default async function DomainsPage() {
 
   return (
     <>
-      <PageHeader title="Domains">
-        Items per domain and layer over the last {DAYS} days, with the top headline in each cell. Coverage depth
-        reflects how closely a field is followed. <MoreLink href="/framework">How to read this</MoreLink>
-      </PageHeader>
+      <PageHeader title="Domains" />
 
       <LayerBoard domains={domains} board={board} days={DAYS} />
 
       <Section title="Cross-domain watchlist">
-        <p className="mb-3 text-muted">Specialists in one field may underestimate developments occurring in another.</p>
         <Rows>
           {reference.crossDomain.map((c) => (
             <div key={c.pair} className="py-3">

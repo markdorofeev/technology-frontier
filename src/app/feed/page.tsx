@@ -40,11 +40,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <PageHeader title="All items">
-        {!params.domain && "Every domain in one list. "}
-        {total.toLocaleString()} items, {params.sort === "newest" ? "newest first" : "most voted first"}.
-        An item reported by several sources appears once, marked +N.
-      </PageHeader>
+      <PageHeader title="All items" kicker={`${total.toLocaleString()} ${total === 1 ? "item" : "items"}`} />
 
       <form action="/feed" className="mb-4 flex flex-wrap gap-2">
         <input

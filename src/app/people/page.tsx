@@ -24,11 +24,7 @@ export default function PeoplePage() {
 
   return (
     <>
-      <PageHeader title="People">
-        People whose work or analysis helps make sense of new results. Chosen for their contributions, technical
-        insight, or closeness to important work, not follower counts. For people who publish rarely, follow their
-        papers and organizations instead.
-      </PageHeader>
+      <PageHeader title="People" />
 
       <Section title="Shortlist">
         <Rows>
@@ -45,10 +41,6 @@ export default function PeoplePage() {
       </Section>
 
       <Section title="Cross-disciplinary interpreters">
-        <p className="mb-3 text-muted">
-          They read widely, test new releases, and explain what a result does and doesn&apos;t show. Treat their
-          views as informed opinion, not independent confirmation.
-        </p>
         <Rows>
           {reference.interpreters.map((p) => (
             <div key={p.name} className="py-3">
