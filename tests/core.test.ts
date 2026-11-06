@@ -4,7 +4,16 @@ import { arxivIdFromUrl, canonicalizeUrl } from "@/lib/pipeline/canonicalize";
 import { passesFilter } from "@/lib/pipeline/ingest";
 import { loadRegistry } from "@/lib/registry";
 import { measureTotals } from "@/lib/signals";
-import { excerpt, stripHtml } from "@/lib/text";
+import { excerpt, splitCompounds, stripHtml } from "@/lib/text";
+
+describe("splitCompounds", () => {
+  it.each([
+    ["MOSS-Image", "MOSS Image"],
+    ["baidu/Unlimited-OCR-2", "baidu Unlimited OCR 2"],
+    ["vision -robotics", "vision -robotics"],
+    ["plain words", "plain words"],
+  ])("%s", (q, want) => expect(splitCompounds(q)).toBe(want));
+});
 
 describe("canonicalizeUrl", () => {
   it.each([

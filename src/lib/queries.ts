@@ -2,6 +2,7 @@ import { and, arrayOverlaps, count, desc, eq, gte, inArray, sql, type SQL } from
 import { unstable_cache } from "next/cache";
 import { db, schema } from "@/lib/db";
 import { measureSql } from "@/lib/signals";
+import { splitCompounds } from "@/lib/text";
 
 const REVALIDATE = 300;
 const { items, itemMentions, itemAssessments, sourceState } = schema;
@@ -69,7 +70,12 @@ function where(f: FeedFilters): SQL | undefined {
       sql`exists (select 1 from ${itemMentions} m where m.item_id = ${items.id} and m.source_id = ${f.source})`,
     );
   }
-  if (f.q?.trim()) conds.push(sql`${items.search} @@ websearch_to_tsquery('english', ${f.q.trim()})`);
+  const q = f.q?.trim();
+  if (q) {
+    conds.push(
+      sql`${items.search} @@ (websearch_to_tsquery('english', ${q}) || websearch_to_tsquery('english', ${splitCompounds(q)}))`,
+    );
+  }
   if (!f.all) conds.push(visible());
   return conds.length ? and(...conds) : undefined;
 }

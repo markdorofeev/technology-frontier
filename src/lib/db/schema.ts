@@ -83,9 +83,11 @@ export const items = pgTable(
     status: text("status").notNull().default("new"),
     /** Topic slugs from content/topics.yaml, copied from item_assessments. */
     tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
+    // The title is indexed a second time with slashes and hyphens as spaces: Postgres reads "org/model-name"
+    // as one file path token and splits "V4.1-Flash" differently from "V4.1", so names couldn't be searched by part.
     search: tsvector("search").generatedAlwaysAs(
       (): SQL =>
-        sql`to_tsvector('english', coalesce(${items.title}, '') || ' ' || coalesce(${items.excerpt}, '') || ' ' || coalesce(${items.abstract}, ''))`,
+        sql`to_tsvector('english', coalesce(${items.title}, '') || ' ' || translate(coalesce(${items.title}, ''), '/-', '  ') || ' ' || coalesce(${items.excerpt}, '') || ' ' || coalesce(${items.abstract}, ''))`,
     ),
   },
   (t) => [

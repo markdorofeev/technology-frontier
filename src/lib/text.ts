@@ -8,6 +8,14 @@ const ENTITIES: Record<string, string> = {
   "#39": "'",
 };
 
+/**
+ * A search query with "a-b" and "a/b" as separate words. Postgres requires a hyphenated query word to
+ * appear whole, so "MOSS-Image" alone misses "MOSS-Image-SFT". A leading "-" (exclude) is left alone.
+ */
+export function splitCompounds(q: string): string {
+  return q.replace(/(?<=\w)[-/](?=\w)/g, " ");
+}
+
 /** HTML → plain text, collapsed whitespace. Good enough for feed snippets. */
 export function stripHtml(html: string): string {
   return html

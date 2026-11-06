@@ -29,6 +29,13 @@
       "when": 1793616525967,
       "tag": "0003_drop_scores",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793975163137,
+      "tag": "0004_search_model_names",
+      "breakpoints": true
     }
   ]
 }
