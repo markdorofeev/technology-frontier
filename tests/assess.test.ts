@@ -114,6 +114,11 @@ describe("toAssessment", () => {
     expect(row.proposedTopics).toEqual(["tool use", "x"]);
   });
 
+  it("files an item nowhere rather than under every domain of a wide source", () => {
+    const sourceDomains = ["ai", "biotech", "materials", "quantum"];
+    expect(toAssessment(result(1, { domains: [] }), candidate(1, { sourceDomains }), meta).domains).toEqual([]);
+  });
+
   it("turns unknown topics into proposals and drops unknown domains", () => {
     const row = toAssessment(
       result(1, { domains: ["astrology", "quantum"], topics: ["agents", "Made Up"], proposed_topics: ["agents"] }),
@@ -265,6 +270,12 @@ describe("claude CLI result", () => {
     expect(r.model).toBe("claude-opus-5-5");
     expect(r.usage).toEqual({ input: 2, output: 56, cacheRead: 0, cacheWrite: 1645 });
     expect(r.apiEquivalentUsd).toBe(0.0143);
+  });
+
+  it("reports why the CLI failed when it finishes as success with is_error", () => {
+    const r = parseResult(out({ is_error: true, result: "Failed to authenticate", structured_output: undefined }), "m");
+    expect(r.stopReason).toBe("Failed to authenticate");
+    expect(interpretResponse(r, new Set()).ok).toBe(false);
   });
 
   it("treats CLI errors as a failed stop reason", () => {

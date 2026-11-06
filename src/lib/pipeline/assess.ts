@@ -5,7 +5,7 @@ import { checkBudget, type BudgetCheck } from "@/lib/llm/budget";
 import { claudeCodeClient } from "@/lib/llm/claude-code";
 import { anthropicClient, costUsd, type LlmClient, type LlmRequest, type LlmResponse } from "@/lib/llm/client";
 import * as prompt from "@/lib/llm/prompts/assess.v3";
-import { registry } from "@/lib/registry";
+import { MAX_ITEM_DOMAINS, registry } from "@/lib/registry";
 import { excerpt } from "@/lib/text";
 import { errorMessage, tierFor } from "./ingest";
 
@@ -91,7 +91,7 @@ export function toAssessment(
   const { domains: knownDomains, topics: knownTopics } = registry();
   const domainSet = new Set(knownDomains.map((d) => d.slug));
   const topicSet = new Set(knownTopics.map((t) => t.slug));
-  const domains = uniq(r.domains.filter((d) => domainSet.has(d))).slice(0, 3);
+  const domains = uniq(r.domains.filter((d) => domainSet.has(d))).slice(0, MAX_ITEM_DOMAINS);
   // A topic the model made up is a proposal for the list, not a tag.
   const topics = uniq(r.topics.filter((t) => topicSet.has(t))).slice(0, 4);
   const proposed = [...r.topics.filter((t) => !topicSet.has(t)), ...r.proposed_topics].map(tidy).filter(Boolean);
@@ -101,7 +101,8 @@ export function toAssessment(
     model: meta.model,
     assessedAt: meta.now,
     relevant: r.relevant,
-    domains: domains.length ? domains : item.sourceDomains,
+    // A source wider than the limit is no guide to where one item belongs, so it is filed nowhere.
+    domains: domains.length || item.sourceDomains.length > MAX_ITEM_DOMAINS ? domains : item.sourceDomains,
     topics,
     proposedTopics: uniq(proposed.filter((t) => !topicSet.has(t))).slice(0, 2),
     contribution: r.contribution,

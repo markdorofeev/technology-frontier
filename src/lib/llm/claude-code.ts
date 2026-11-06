@@ -84,9 +84,11 @@ export function parseResult(stdout: string, requestedModel: string): ClaudeCodeR
   const r = resultSchema.parse(json);
   const u = r.usage;
   const models = Object.keys(r.modelUsage ?? {});
+  // A failed login or API error finishes as "success" with is_error set and the reason in `result`.
+  const failure = r.subtype === "success" ? (r.result ?? "CLI reported an error").slice(0, 200) : r.subtype;
   return {
     // The CLI returns structured output through a tool call; a clean finish is "success".
-    stopReason: r.subtype === "success" && !r.is_error ? "end_turn" : r.subtype,
+    stopReason: r.subtype === "success" && !r.is_error ? "end_turn" : failure,
     text: r.structured_output !== undefined ? JSON.stringify(r.structured_output) : null,
     model: models.length === 1 ? models[0] : requestedModel,
     usage: {

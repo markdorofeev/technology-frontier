@@ -24,6 +24,9 @@ function readYaml(file: string): unknown {
   return parse(fs.readFileSync(path.join(CONTENT_DIR, file), "utf8"));
 }
 
+/** The most domains an assessment files an item under. */
+export const MAX_ITEM_DOMAINS = 3;
+
 export type Registry = {
   domains: Domain[];
   sources: Source[];
