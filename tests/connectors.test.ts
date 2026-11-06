@@ -124,6 +124,17 @@ describe("hf-papers minUpvotes", () => {
   });
 });
 
+describe("hf-papers lookback", () => {
+  it("reads each recent day in full and keeps a paper listed twice once", async () => {
+    const http = fakeHttp([[/huggingface/, fixture("hf.json")]]);
+    const { items } = await hfPapersConnector.fetch(ctx(parse(hfPapersConnector, { lookbackDays: 3 }), http));
+    expect(http.requested).toHaveLength(3);
+    for (const url of http.requested) expect(url).toMatch(/\?date=\d{4}-\d{2}-\d{2}&limit=100$/);
+    expect(new Set(http.requested).size).toBe(3);
+    expect(items).toHaveLength(3);
+  });
+});
+
 describe("github-search", () => {
   it("builds a created:> query and keeps stars", async () => {
     const http = fakeHttp([[/api\.github\.com/, fixture("github.json")]]);

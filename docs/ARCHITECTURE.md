@@ -151,7 +151,7 @@ The YAML config: `{ listUrl, linkSelector, dateSelector?, allowPrefix, minLinks 
 - Each new link's page is fetched once, for `<title>`, `og:description` and `article:published_time`. That fills `title`, `excerpt` and `publishedAt`.
 
 ### 5.4 Source-specific notes
-- **HF Daily Papers:** papers below `minUpvotes` are skipped. Because each run re-reads the day's list, a paper that climbs past the floor later is picked up then.
+- **HF Daily Papers:** papers below `minUpvotes` are skipped. Each run re-reads the last 7 listing days in full, so a paper that climbs past the floor later is picked up then.
 - **One feed, two sources:** OpenAI publishes research and releases in one RSS feed. Two registry entries read it, each keeping different feed categories, so research lands in the scientific layer and releases in the product layer.
 - **Unused connectors:** `arxiv`, `biorxiv`, `ctgov` and `github-search` stay in the code, but no registry entry uses them. Their raw output (every new preprint, trial or popular repo) was mostly noise for this site.
 
