@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { budgetDecision } from "@/lib/llm/budget";
 import { parseResult } from "@/lib/llm/claude-code";
 import { costUsd, type LlmClient, type LlmResponse } from "@/lib/llm/client";
-import * as prompt from "@/lib/llm/prompts/assess.v2";
+import * as prompt from "@/lib/llm/prompts/assess.v3";
 import {
   interpretResponse,
   processBatches,

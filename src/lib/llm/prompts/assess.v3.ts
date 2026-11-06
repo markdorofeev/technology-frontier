@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Domain, Topic } from "@/lib/registry";
 
-export const version = "assess.v2";
+export const version = "assess.v3";
 
 export const CONTRIBUTIONS = [
   "method",
@@ -75,7 +75,7 @@ The user message holds an <items> block: a JSON array of items, each with an id,
 
 Return one result per input item, with the same id. For each item:
 
-relevant: true if the item reports a result, a method, a release, a dataset, a benchmark or a technical finding. false if it is company news, a partnership, funding, hiring, an event, a policy or opinion piece, a customer story, or a correction notice. A position paper or survey from a lab can still be relevant.
+relevant: true if the item reports a result, a method, a release, a dataset, a benchmark or a technical finding. false if it is company news, a partnership, funding, hiring, an event, a policy or opinion piece, a customer story, or a correction notice. A position paper or survey from a lab can still be relevant. Also false for a sound result that belongs to none of the domains below, such as ecology, archaeology or medicine with no new technology behind it.
 
 domains: 1 to 3 domain slugs the work belongs to, most central first. Use what the work is about, not who published it: a quantum paper from an AI lab is quantum. Domains:
 ${domainLines}

@@ -4,7 +4,7 @@ import { db, schema, type Database } from "@/lib/db";
 import { checkBudget, type BudgetCheck } from "@/lib/llm/budget";
 import { claudeCodeClient } from "@/lib/llm/claude-code";
 import { anthropicClient, costUsd, type LlmClient, type LlmRequest, type LlmResponse } from "@/lib/llm/client";
-import * as prompt from "@/lib/llm/prompts/assess.v2";
+import * as prompt from "@/lib/llm/prompts/assess.v3";
 import { registry } from "@/lib/registry";
 import { excerpt } from "@/lib/text";
 import { errorMessage, tierFor } from "./ingest";
