@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns="http://purl.org/rss/1.0/">
+  <channel rdf:about="https://www.science.org/journal/science"><title>Science</title></channel>
+  <item rdf:about="https://www.science.org/doi/abs/10.1126/science.adt3444?af=R">
+    <title>Equivalence of pseudogap and pairing energy in a cuprate high-temperature superconductor</title>
+    <link>https://www.science.org/doi/abs/10.1126/science.adt3444?af=R</link>
+    <description>Science, Volume 394, Issue 6824, Page 682-685, November 2026.</description>
+    <dc:date>2026-11-05T07:00:13Z</dc:date>
+    <dc:type>Research Article</dc:type>
+  </item>
+  <item rdf:about="https://www.science.org/doi/abs/10.1126/science.example?af=R">
+    <title>An editorial</title>
+    <link>https://www.science.org/doi/abs/10.1126/science.example?af=R</link>
+    <description>Science, Volume 394, Issue 6824, November 2026.</description>
+    <dc:date>2026-11-05T07:00:13Z</dc:date>
+    <dc:type>Editorial</dc:type>
+  </item>
+</rdf:RDF>

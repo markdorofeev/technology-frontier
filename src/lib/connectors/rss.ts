@@ -12,9 +12,12 @@ const config = z.object({
   hn: z.boolean().default(false),
 });
 
-type FeedItem = Parser.Item & { "content:encodedSnippet"?: string; id?: string; summary?: string };
+type FeedItem = Parser.Item & { "content:encodedSnippet"?: string; id?: string; summary?: string; dcType?: string };
 
-const parser = new Parser<Record<string, unknown>, FeedItem>({ timeout: 0 });
+const parser = new Parser<Record<string, unknown>, FeedItem>({
+  timeout: 0,
+  customFields: { item: [["dc:type", "dcType"]] },
+});
 
 export function parseHnDescription(html: string | undefined) {
   const text = html ?? "";
@@ -26,7 +29,10 @@ export function parseHnDescription(html: string | undefined) {
   return { points: num(/Points:\s*(\d+)/), comments: num(/#\s*Comments:\s*(\d+)/), hnId };
 }
 
-/** rss-parser gives RSS categories as strings and Atom ones as `{ $: { term } }` objects. */
+/**
+ * rss-parser gives RSS categories as strings and Atom ones as `{ $: { term } }` objects.
+ * Journals on science.org state the article type in `dc:type`, which counts as a category too.
+ */
 function categoriesOf(entry: FeedItem): string[] | undefined {
   const raw = (entry.categories ?? []) as unknown[];
   const out = raw.flatMap((c) => {
@@ -34,7 +40,7 @@ function categoriesOf(entry: FeedItem): string[] | undefined {
     const o = c as { _?: string; $?: { term?: string } };
     return [o.$?.term ?? o._ ?? ""].map((t) => t.trim());
   });
-  const kept = out.filter(Boolean);
+  const kept = [...out, entry.dcType?.trim() ?? ""].filter(Boolean);
   return kept.length ? kept : undefined;
 }
 

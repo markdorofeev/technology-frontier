@@ -1,6 +1,6 @@
 # Technology Frontier Radar — Requirements
 
-Status: draft v0.7 (2026-11-02). v0.7 drops the per-item scores and rank: "Top" sorts by the votes sources publish (§7, §11 #14). v0.6 widens release coverage: Hacker News as a selector, Hugging Face new models, more lab channels (§5.1, §11 #13). v0.5 replaces Phase 1's triage-then-extract funnel with one assessment pass over every item (tags, scores, rank). v0.4 changes the goal from spotting commercial opportunities to a high-quality overview of recent discoveries, and replaces the starter sources with primary sources only. v0.3 dropped the daily brief. The current build is Phase 0 (sources + website) plus Phase 1's assessment. Turns the "Technology Frontier Intelligence" research brief into something buildable. The decisions from v0.1's open questions are recorded in §11.
+Status: draft v0.8 (2026-11-06). v0.8 adds broad journals for papers outside AI, and the assessment drops results that fit no domain (§5.1). v0.7 drops the per-item scores and rank: "Top" sorts by the votes sources publish (§7, §11 #14). v0.6 widens release coverage: Hacker News as a selector, Hugging Face new models, more lab channels (§5.1, §11 #13). v0.5 replaces Phase 1's triage-then-extract funnel with one assessment pass over every item (tags, scores, rank). v0.4 changes the goal from spotting commercial opportunities to a high-quality overview of recent discoveries, and replaces the starter sources with primary sources only. v0.3 dropped the daily brief. The current build is Phase 0 (sources + website) plus Phase 1's assessment. Turns the "Technology Frontier Intelligence" research brief into something buildable. The decisions from v0.1's open questions are recorded in §11.
 
 ---
 
@@ -164,7 +164,18 @@ Added on 2026-10-22: lab engineering blogs, release channels for labs without on
 | 37 | Hacker News 500+ | Any | product | RSS (hnrss.org), selector only | drops news, social and video links, Ask/Tell HN |
 | 38 | Hugging Face new models | AI | product | JSON API | original models (no base model) under 30 days old with 150+ likes |
 
-Totals: **29 feed/API**, **6 page monitor**, **4 manual**. Exact endpoints and filter patterns live in `content/sources.yaml`.
+Added on 2026-11-06: journals for papers outside AI, which had no preprint source and few journals.
+
+| # | Source | Domain | Layer | Method | Filter |
+|---|---|---|---|---|---|
+| 39 | Nature | Any | scientific | RSS | drops news and comment (`d41586` links) and corrections |
+| 40 | Science | Any | scientific | RSS | `dc:type` Research Article |
+| 41 | Nature Physics | Quantum/Materials | scientific | RSS | drops corrections |
+| 42 | Nature Astronomy | Space | scientific | RSS | drops corrections |
+| 43 | Nature Neuroscience | Neurotech | scientific | RSS | drops corrections |
+| 44 | Nature Machine Intelligence | AI | scientific | RSS | drops corrections |
+
+Totals: **41 feed/API**, **6 page monitor**, **4 manual**. Exact endpoints and filter patterns live in `content/sources.yaml`.
 
 Also confirmed reachable, for Phase 3: OpenAlex API, GitHub API, PyPI Stats API, npm downloads API.
 

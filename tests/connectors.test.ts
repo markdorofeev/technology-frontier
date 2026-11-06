@@ -25,6 +25,13 @@ describe("rss", () => {
     }
   });
 
+  it("treats dc:type as a category", async () => {
+    const http = fakeHttp([[/science\.org/, fixture("science.xml")]]);
+    const config = parse(rssConnector, { url: "https://www.science.org/feed" });
+    const { items } = await rssConnector.fetch(ctx(config, http));
+    expect(items.map((i) => i.categories)).toEqual([["Research Article"], ["Editorial"]]);
+  });
+
   it("keeps feed categories for source filters", async () => {
     const http = fakeHttp([[/ieee/, fixture("ieee.xml")]]);
     const config = parse(rssConnector, { url: "https://spectrum.ieee.org/feeds/feed.rss" });

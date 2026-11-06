@@ -7,7 +7,7 @@
 # layer:  scientific | engineering | product
 # frequency: hourly | daily | weekly | yearly
 # filter (optional, applied to every fetched item; patterns are case-insensitive regexes):
-#   categories: [..]   keep only items carrying one of these feed categories
+#   categories: [..]   keep only items carrying one of these feed categories (or this dc:type)
 #   includeTitle / excludeTitle / excludeUrl
 
 # --- AI ---
@@ -637,6 +637,95 @@
   config: { url: "https://www.science.org/blogs/pipeline/feed", maxItems: 20 }
   filter:
     excludeTitle: \b(vacation|time off|funding|opinion|crisis)\b
+
+# --- Broad journals ---
+# Their domains are a placeholder: the assessment sets each paper's own, and drops work outside all of them.
+# The four Nature research journals list only their latest 8 papers, so they are read hourly.
+
+- id: nature
+  name: Nature
+  domains: [ai, biotech, energy-generation, energy-storage, materials, neurotech, quantum, robotics, semiconductors, space]
+  kind: research
+  layer: scientific
+  method: rss
+  homepage: https://www.nature.com/nature/
+  frequency: daily
+  priority: 1
+  reliability: Peer-reviewed journal; news and comment (d41586 links) are dropped
+  config: { url: "https://www.nature.com/nature.rss", maxItems: 75 }
+  filter:
+    excludeTitle: ^(author|publisher) correction|^retraction|^editorial expression of concern
+    excludeUrl: /articles/d41586
+
+- id: science
+  name: Science
+  domains: [ai, biotech, energy-generation, energy-storage, materials, neurotech, quantum, robotics, semiconductors, space]
+  kind: research
+  layer: scientific
+  method: rss
+  homepage: https://www.science.org/journal/science
+  frequency: daily
+  priority: 1
+  reliability: Peer-reviewed journal; only research articles are kept
+  config: { url: "https://www.science.org/action/showFeed?type=etoc&feed=rss&jc=science", maxItems: 60 }
+  filter:
+    categories: [Research Article]
+
+- id: nature-physics
+  name: Nature Physics
+  domains: [quantum, materials]
+  kind: research
+  layer: scientific
+  method: rss
+  homepage: https://www.nature.com/nphys/
+  frequency: hourly
+  priority: 2
+  reliability: Peer-reviewed journal
+  config: { url: "https://www.nature.com/nphys.rss", maxItems: 8 }
+  filter:
+    excludeTitle: ^(author|publisher) correction|^retraction|^editorial expression of concern
+
+- id: nature-astronomy
+  name: Nature Astronomy
+  domains: [space]
+  kind: research
+  layer: scientific
+  method: rss
+  homepage: https://www.nature.com/natastron/
+  frequency: hourly
+  priority: 2
+  reliability: Peer-reviewed journal
+  config: { url: "https://www.nature.com/natastron.rss", maxItems: 8 }
+  filter:
+    excludeTitle: ^(author|publisher) correction|^retraction|^editorial expression of concern
+
+- id: nature-neuroscience
+  name: Nature Neuroscience
+  domains: [neurotech]
+  kind: research
+  layer: scientific
+  method: rss
+  homepage: https://www.nature.com/neuro/
+  frequency: hourly
+  priority: 2
+  reliability: Peer-reviewed journal
+  config: { url: "https://www.nature.com/neuro.rss", maxItems: 8 }
+  filter:
+    excludeTitle: ^(author|publisher) correction|^retraction|^editorial expression of concern
+
+- id: nature-machine-intelligence
+  name: Nature Machine Intelligence
+  domains: [ai]
+  kind: research
+  layer: scientific
+  method: rss
+  homepage: https://www.nature.com/natmachintell/
+  frequency: hourly
+  priority: 2
+  reliability: Peer-reviewed journal
+  config: { url: "https://www.nature.com/natmachintell.rss", maxItems: 8 }
+  filter:
+    excludeTitle: ^(author|publisher) correction|^retraction|^editorial expression of concern
 
 # --- Cross-domain discovery ---
 # Hacker News is only a selector (REQUIREMENTS §1 source policy): a story that reaches 500 points
