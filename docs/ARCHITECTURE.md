@@ -318,6 +318,7 @@ All times are Asia/Dubai (UTC+4). Vercel Hobby fires anywhere within the hour, s
 | Route | Phase |
 |---|---|
 | `/` | 0, the week's top items in each domain |
+| `/month` | 0, the same over 30 days |
 | `/domains` | 0, domain × layer counts for the week |
 | `/d/[slug]?sort=&layer=&tag=&all=&page=`, `/d/[slug]/about` | 0 |
 | `/feed?q=&domain=&layer=&tag=&source=&sort=&all=&page=` | 0 |

@@ -254,6 +254,7 @@ The rubric for trends (Phase 2). Each dimension is scored 1–5 by the LLM, with
 | Page | Phase | Contents |
 |---|---|---|
 | Home ("This week") | 0 | The week's top items per domain (5 deep, 3 regular, 2 broad), quiet domains in one line, source health |
+| This month `/month` | 0 | The same digest over 30 days |
 | Domains | 0 | Items per domain × layer over the week, grouped by tier, plus the cross-domain watchlist |
 | Domain `/d/{slug}` | 0 | The domain's items: sort, layer and topic filters. An About tab has subfields, signals to watch, research/product/people lists; trends (P2) |
 | All items `/feed` | 0 | Every domain in one list, with search and a collapsed domain/layer/topic filter panel |
