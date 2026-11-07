@@ -87,7 +87,7 @@ Each phase ships something usable on its own. Don't start a phase until the one 
 - **Top order (built):** the votes the sources publish, summed across sources (§7). Nothing is scored for ranking.
 - **Extraction (not built yet):** the Development fields (§6.3) for the top ~15–25 items per day.
 - **Budget enforcement (built):** a hard cap of **$20/month**, enforced in code. Spend is recorded per call from the API's token usage. A call goes ahead only if, at its worst-case cost, the month stays under the cap and today stays under 1.5 × (remaining budget ÷ days left in the month). Otherwise LLM steps stop until the allowance resets; items stay in the feed unassessed, and the sources page shows how many. The 80% alert email is not built yet.
-- Lists: Top this week / Top this month / Newest sorting, and a topic filter on domain pages. Off-topic items are hidden unless the reader chooses "Show all" (decision #12). Items from a source listing more than 3 domains (Nature, Science) stay out of domain lists until assessed, since the source says nothing about where one paper belongs; All items and the source page still show them.
+- Lists: Top this week / Top this month / Newest sorting, and a topic filter on domain pages. Off-topic items are hidden unless the reader chooses "Show all" (decision #12). Broad journals (Nature, Science) list no domains: their papers appear in domain lists once the assessment files them.
 - Thumbs up/down on each item, stored for tuning later. Owner only, so it waits for sign-in.
 
 **Acceptance:**

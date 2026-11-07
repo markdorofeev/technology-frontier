@@ -81,6 +81,7 @@ export default async function SourcePage({ params }: Params) {
         <div className="grid grid-cols-[8rem_1fr] gap-4 py-2">
           <span className="text-faint">Domains</span>
           <span className="flex flex-wrap gap-x-3">
+            {!source.domains.length && <span>Set per item by the assessment</span>}
             {source.domains.map((slug) => (
               <Link key={slug} href={`/d/${slug}`} className="text-accent hover:underline">
                 {domains.find((d) => d.slug === slug)?.name ?? slug}

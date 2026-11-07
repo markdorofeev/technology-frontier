@@ -6,6 +6,7 @@
 # kind:   research | release | benchmark | press
 # layer:  scientific | engineering | product
 # frequency: hourly | daily | weekly | yearly
+# domains: [] for a journal that covers everything; the assessment files each item instead.
 # filter (optional, applied to every fetched item; patterns are case-insensitive regexes):
 #   categories: [..]   keep only items carrying one of these feed categories (or this dc:type)
 #   includeTitle / excludeTitle / excludeUrl
@@ -644,7 +645,7 @@
 
 - id: nature
   name: Nature
-  domains: [ai, biotech, energy-generation, energy-storage, materials, neurotech, quantum, robotics, semiconductors, space]
+  domains: []
   kind: research
   layer: scientific
   method: rss
@@ -659,7 +660,7 @@
 
 - id: science
   name: Science
-  domains: [ai, biotech, energy-generation, energy-storage, materials, neurotech, quantum, robotics, semiconductors, space]
+  domains: []
   kind: research
   layer: scientific
   method: rss

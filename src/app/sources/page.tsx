@@ -72,7 +72,7 @@ export default async function SourcesPage() {
                   </span>
                 </div>
                 <p className="text-sm text-faint">
-                  {s.domains.map(domainName).join(", ")} · {s.layer} · {METHOD_LABEL[s.method]}, {s.frequency} · last
+                  {s.domains.length ? s.domains.map(domainName).join(", ") : "Domain set per item"} · {s.layer} · {METHOD_LABEL[s.method]}, {s.frequency} · last
                   success {timeAgo(h?.lastSuccessAt)}
                   {q && (
                     <span title={`${q.assessed} items assessed, last ${RELEVANCE_DAYS} days`}>

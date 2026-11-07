@@ -1,7 +1,6 @@
 import { and, arrayOverlaps, count, desc, eq, gte, inArray, sql, type SQL } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { db, schema } from "@/lib/db";
-import { MAX_ITEM_DOMAINS } from "@/lib/registry";
 import { measureSql } from "@/lib/signals";
 import { splitCompounds } from "@/lib/text";
 
@@ -51,14 +50,6 @@ function visible(): SQL {
   return sql`not exists (select 1 from ${itemAssessments} a where a.item_id = ${items.id} and a.relevant = false)`;
 }
 
-/**
- * Whether an item's domains can be trusted for domain lists. A source wider than an assessment can file
- * an item under (Nature, Science) says nothing about one paper, so its items wait for their assessment.
- */
-function placed(id: SQL | typeof items.id = items.id, sourceDomains: SQL | typeof items.sourceDomains = items.sourceDomains): SQL {
-  return sql`(cardinality(${sourceDomains}) <= ${MAX_ITEM_DOMAINS} or exists (select 1 from ${itemAssessments} a where a.item_id = ${id}))`;
-}
-
 /** An item's votes: each source's latest count, summed. What "Top" sorts by. */
 function votes(itemId: SQL | typeof items.id): SQL<number> {
   return sql<number>`(select coalesce(sum(v.n), 0) from (
@@ -69,7 +60,7 @@ function votes(itemId: SQL | typeof items.id): SQL<number> {
 
 function where(f: FeedFilters): SQL | undefined {
   const conds: SQL[] = [];
-  if (f.domain) conds.push(arrayOverlaps(items.domains, [f.domain]), placed());
+  if (f.domain) conds.push(arrayOverlaps(items.domains, [f.domain]));
   if (f.layer) conds.push(eq(items.layer, f.layer));
   if (f.kind) conds.push(eq(items.kind, f.kind));
   if (f.tag) conds.push(arrayOverlaps(items.tags, [f.tag]));
@@ -179,7 +170,7 @@ export const getLatestByDomain = unstable_cache(
           .select(feedColumns)
           .from(items)
           .leftJoin(itemAssessments, withAssessment)
-          .where(and(arrayOverlaps(items.domains, [slug]), placed()))
+          .where(arrayOverlaps(items.domains, [slug]))
           .orderBy(...newestFirst)
           .limit(perDomain);
         out[slug] = await attachMentions(rows);
@@ -271,7 +262,6 @@ export const getLayerBoard = unstable_cache(
         from ${items} i
         where i.sort_at >= ${since.toISOString()}
           and not exists (select 1 from ${itemAssessments} a where a.item_id = i.id and a.relevant = false)
-          and ${placed(sql`i.id`, sql`i.source_domains`)}
       )
       select domain, layer, count(*)::int as n,
              (array_agg(title order by votes desc, srcs desc, sort_at desc))[1] as top_title

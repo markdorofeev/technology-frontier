@@ -63,7 +63,7 @@ export const sourceFilterSchema = z.object({
 export const sourceSchema = z.object({
   id: z.string().regex(/^[a-z0-9-]+$/),
   name: z.string(),
-  domains: z.array(z.string()).min(1),
+  domains: z.array(z.string()),
   kind: z.enum(KINDS),
   layer: z.enum(LAYERS),
   method: z.enum(METHODS),

@@ -114,9 +114,8 @@ describe("toAssessment", () => {
     expect(row.proposedTopics).toEqual(["tool use", "x"]);
   });
 
-  it("files an item nowhere rather than under every domain of a wide source", () => {
-    const sourceDomains = ["ai", "biotech", "materials", "quantum"];
-    expect(toAssessment(result(1, { domains: [] }), candidate(1, { sourceDomains }), meta).domains).toEqual([]);
+  it("files an item from a source with no domains nowhere when the result names none", () => {
+    expect(toAssessment(result(1, { domains: [] }), candidate(1, { sourceDomains: [] }), meta).domains).toEqual([]);
   });
 
   it("turns unknown topics into proposals and drops unknown domains", () => {

@@ -49,6 +49,12 @@ function hashConfig(source: Source) {
 export async function syncSources(database: Database = db()) {
   const { sources } = registry();
   const now = new Date();
+  const before = new Map(
+    (await database.select({ id: schema.sources.id, domains: schema.sources.domains }).from(schema.sources)).map((r) => [
+      r.id,
+      r.domains,
+    ]),
+  );
   for (const s of sources) {
     const row = {
       id: s.id,
@@ -66,6 +72,8 @@ export async function syncSources(database: Database = db()) {
     };
     await database.insert(schema.sources).values(row).onConflictDoUpdate({ target: schema.sources.id, set: row });
     await database.insert(schema.sourceState).values({ sourceId: s.id }).onConflictDoNothing();
+    const old = before.get(s.id);
+    if (old && old.join() !== s.domains.join()) await moveDomains(database, s.id, old, s.domains);
   }
   const ids = sources.map((s) => s.id);
   await database
@@ -73,6 +81,27 @@ export async function syncSources(database: Database = db()) {
     .set({ inRegistry: false, enabled: false, updatedAt: now })
     .where(notInArray(schema.sources.id, ids));
   return sources.length;
+}
+
+/**
+ * Carries a change to a source's domains onto the items that took them from it. Items whose connector
+ * gave them their own domains (ctgov) don't match `old` and are left alone, and so are domains an
+ * assessment chose.
+ */
+async function moveDomains(database: Database, sourceId: string, old: string[], next: string[]) {
+  const { items, itemAssessments } = schema;
+  const fromSource = and(eq(items.firstSourceId, sourceId), eq(items.sourceDomains, old));
+  await database
+    .update(items)
+    .set({ domains: next, tier: tierFor(next) })
+    .where(
+      and(
+        fromSource,
+        eq(items.domains, old),
+        sql`not exists (select 1 from ${itemAssessments} a where a.item_id = ${items.id})`,
+      ),
+    );
+  await database.update(items).set({ sourceDomains: next }).where(fromSource);
 }
 
 /** Whether an item survives its source's `filter` (content/sources.yaml). */
